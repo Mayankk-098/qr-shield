@@ -118,44 +118,46 @@ def totp_verify():
 
 
 
-@app.route('/verify/<encrypted_id>', methods=['GET', 'POST'])
-def verify(encrypted_id):
-    try:
-        session_id = f.decrypt(encrypted_id.encode()).decode()
-    except:
-        return "Invalid or tampered QR code!"
+@app.route('/verify', methods=['POST'])
+def verify():
+    otp_input = request.form['otp']
+    email = request.form['email']
 
     conn = sqlite3.connect('sessions.db')
     c = conn.cursor()
-    c.execute('SELECT otp, expiry, status FROM sessions WHERE session_id = ?', (session_id,))
+
+    c.execute("SELECT secret, created_at FROM sessions WHERE email=?", (email,))
     result = c.fetchone()
-    conn.close()
 
     if result:
-        otp_db, expiry_db, status = result
-        expiry_db = datetime.strptime(expiry_db, "%Y-%m-%d %H:%M:%S")
+        secret, created_at = result
+        created_at = datetime.datetime.strptime(created_at, "%Y-%m-%d %H:%M:%S.%f")
+        now = datetime.datetime.now()
 
-        if datetime.now() > expiry_db:
+        # Expiry logic: 5 minutes
+        if (now - created_at).seconds > 300:
+            log_scan(email, 'expired')
             return render_template('expired.html')
 
-        if request.method == 'POST':
-            user_otp = request.form['otp']
-            if user_otp == otp_db:
-                # Update status to 'verified'
-                conn = sqlite3.connect('sessions.db')
-                c = conn.cursor()
-                c.execute('UPDATE sessions SET status = ? WHERE session_id = ?', ('verified', session_id))
-                conn.commit()
-                conn.close()
-                return render_template('success.html')
-            else:
-                return render_template('verify.html', session_id=encrypted_id, error='Invalid OTP! Please try again.')
-
-        return render_template('verify.html', session_id=encrypted_id)
+        totp = pyotp.TOTP(secret)
+        if totp.verify(otp_input):
+            log_scan(email, 'success')
+            return render_template('success.html')
+        else:
+            log_scan(email, 'failure')
+            return render_template('verify.html', error="Invalid OTP")
     else:
-        return "Invalid Session!"
+        log_scan(email, 'not_found')
+        return "Session not found"
 
-
+def log_scan(email, status):
+    conn = sqlite3.connect('sessions.db')
+    c = conn.cursor()
+    c.execute("INSERT INTO scan_logs (email, scan_time, status) VALUES (?, ?, ?)",
+              (email, datetime.datetime.now(), status))
+    conn.commit()
+    conn.close()
+    
 def send_email(to_email, otp):
     with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
         smtp.starttls()
