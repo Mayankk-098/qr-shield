@@ -1,4 +1,5 @@
 from cryptography.fernet import Fernet
+from cryptography.fernet import InvalidToken
 import sqlite3
 import pyotp
 from flask import Flask, render_template, request, redirect, url_for
@@ -61,8 +62,8 @@ def generate():
     send_email(user_email, otp)
     encrypted_id = f.encrypt(session_id.encode()).decode()
 
-    # Generate QR with DEPLOYMENT_URL not localhost
-    data = DEPLOYMENT_URL + 'verify/' + encrypted_id
+    # Generate QR with request.url_root for consistency
+    data = request.url_root + 'verify/' + encrypted_id
     qr = qrcode.make(data)
     qr_path = f'static/qrs/{session_id}.png'
     qr.save(qr_path)
@@ -102,11 +103,13 @@ def totp_verify():
         </form>
     '''
 
-@app.route('/verify', methods=['GET', 'POST'])
-def verify():
+@app.route('/verify/<encrypted_id>', methods=['GET', 'POST'])
+def verify(encrypted_id):
     if request.method == 'GET':
-        encrypted_id = request.path.split('/')[-1]
-        session_id = f.decrypt(encrypted_id.encode()).decode()
+        try:
+            session_id = f.decrypt(encrypted_id.encode()).decode()
+        except InvalidToken:
+            return "Invalid or tampered link."
 
         conn = sqlite3.connect('sessions.db')
         c = conn.cursor()
@@ -127,12 +130,11 @@ def verify():
         c = conn.cursor()
         c.execute("SELECT otp FROM sessions WHERE session_id=?", (session_id,))
         result = c.fetchone()
+        conn.close()
 
         if result and otp_input == result[0]:
-            conn.close()
             return render_template('success.html')
         else:
-            conn.close()
             return render_template('verify.html', session_id=session_id, error="Invalid OTP")
 
 
