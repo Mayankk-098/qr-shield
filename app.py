@@ -8,6 +8,7 @@ import random
 import smtplib
 import os
 from datetime import datetime, timedelta
+import urllib.parse
 
 # Initialize DB
 def init_db():
@@ -61,9 +62,10 @@ def generate():
 
     send_email(user_email, otp)
     encrypted_id = f.encrypt(session_id.encode()).decode()
+    encrypted_id_urlsafe = urllib.parse.quote(encrypted_id)
 
     # Generate QR with request.url_root for consistency
-    data = request.url_root + 'verify/' + encrypted_id
+    data = request.url_root + 'verify/' + encrypted_id_urlsafe
     qr = qrcode.make(data)
     qr_path = f'static/qrs/{session_id}.png'
     qr.save(qr_path)
@@ -103,10 +105,11 @@ def totp_verify():
         </form>
     '''
 
-@app.route('/verify/<encrypted_id>', methods=['GET', 'POST'])
+@app.route('/verify/<path:encrypted_id>', methods=['GET', 'POST'])
 def verify(encrypted_id):
     if request.method == 'GET':
         try:
+            encrypted_id = urllib.parse.unquote(encrypted_id)
             session_id = f.decrypt(encrypted_id.encode()).decode()
         except InvalidToken:
             return "Invalid or tampered link."
