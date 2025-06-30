@@ -110,25 +110,56 @@ def verify():
             return "Missing or invalid link."
         conn = sqlite3.connect('sessions.db')
         c = conn.cursor()
-        c.execute("SELECT otp FROM sessions WHERE session_id=?", (session_id,))
+        c.execute("SELECT session_id, otp, expiry, status, created_at FROM sessions WHERE session_id=?", (session_id,))
         result = c.fetchone()
-        conn.close()
         if result:
+            expiry_str = result[2]
+            expiry_time = datetime.strptime(expiry_str, "%Y-%m-%d %H:%M:%S")
+            if datetime.now() > expiry_time:
+                # Log expired scan
+                c.execute('''INSERT INTO scan_logs (email, scan_time, status) VALUES (?, ?, ?)''', (None, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 'expired'))
+                conn.commit()
+                conn.close()
+                return render_template('expired.html')
+            conn.close()
             return render_template('verify.html', session_id=session_id)
         else:
+            conn.close()
             return "Invalid or expired session."
     elif request.method == 'POST':
         otp_input = request.form['otp']
         session_id = request.form['session_id']
         conn = sqlite3.connect('sessions.db')
         c = conn.cursor()
-        c.execute("SELECT otp FROM sessions WHERE session_id=?", (session_id,))
+        c.execute("SELECT session_id, otp, expiry, status, created_at FROM sessions WHERE session_id=?", (session_id,))
         result = c.fetchone()
-        conn.close()
-        if result and otp_input == result[0]:
-            return render_template('success.html')
+        if result:
+            expiry_str = result[2]
+            expiry_time = datetime.strptime(expiry_str, "%Y-%m-%d %H:%M:%S")
+            if datetime.now() > expiry_time:
+                # Log expired scan
+                c.execute('''INSERT INTO scan_logs (email, scan_time, status) VALUES (?, ?, ?)''', (None, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 'expired'))
+                conn.commit()
+                conn.close()
+                return render_template('expired.html')
+            otp_db = result[1]
+            if otp_input == otp_db:
+                # Update status to verified
+                c.execute("UPDATE sessions SET status=? WHERE session_id=?", ('verified', session_id))
+                # Log success
+                c.execute('''INSERT INTO scan_logs (email, scan_time, status) VALUES (?, ?, ?)''', (None, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 'success'))
+                conn.commit()
+                conn.close()
+                return render_template('success.html')
+            else:
+                # Log failed attempt
+                c.execute('''INSERT INTO scan_logs (email, scan_time, status) VALUES (?, ?, ?)''', (None, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 'failed'))
+                conn.commit()
+                conn.close()
+                return render_template('verify.html', session_id=session_id, error="Invalid OTP")
         else:
-            return render_template('verify.html', session_id=session_id, error="Invalid OTP")
+            conn.close()
+            return "Session not found."
 
 def send_email(to_email, otp):
     with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
