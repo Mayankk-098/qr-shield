@@ -26,7 +26,22 @@ def init_db():
     conn.commit()
     conn.close()
 
+def init_scan_logs():
+    conn = sqlite3.connect('sessions.db')
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS scan_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT,
+            scan_time TEXT,
+            status TEXT
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
 init_db()
+init_scan_logs()
 
 # Encryption key
 ENCRYPTION_KEY = b'PHVvRWaCRobnyHOMy3mD6o2Jpsm40Nk7SDgvkEe7L-Y='
