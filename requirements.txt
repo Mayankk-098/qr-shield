@@ -3,3 +3,4 @@ qrcode
 cryptography
 pyotp
 gunicorn
+Pillow
