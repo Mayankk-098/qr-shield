@@ -140,31 +140,6 @@ def verify(encrypted_id):
         else:
             return render_template('verify.html', session_id=session_id, error="Invalid OTP")
 
-
-@app.route('/verify', methods=['POST'])
-def verify_post():
-    otp_input = request.form['otp']
-    encrypted_id = request.form['session_id']
-
-    try:
-        session_id = f.decrypt(encrypted_id.encode()).decode()
-    except:
-        return "Invalid or tampered data."
-
-    conn = sqlite3.connect('sessions.db')
-    c = conn.cursor()
-    c.execute("SELECT otp FROM sessions WHERE session_id=?", (session_id,))
-    row = c.fetchone()
-
-    if row:
-        otp_db = row[0]
-        if otp_input == otp_db:
-            return render_template('success.html')
-        else:
-            return render_template('verify.html', session_id=encrypted_id, error="Invalid OTP")
-    else:
-        return "Session not found."
-
 def send_email(to_email, otp):
     with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
         smtp.starttls()
