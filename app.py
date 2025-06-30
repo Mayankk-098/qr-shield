@@ -176,6 +176,19 @@ def verify():
             conn.close()
             return "Session not found."
 
+@app.route('/view-logs')
+def view_logs():
+    conn = sqlite3.connect('sessions.db')
+    c = conn.cursor()
+    c.execute('SELECT * FROM scan_logs ORDER BY id DESC')
+    logs = c.fetchall()
+    conn.close()
+    html = "<h2>Scan Logs</h2><table border='1'><tr><th>ID</th><th>Email</th><th>Scan Time</th><th>Status</th></tr>"
+    for row in logs:
+        html += "<tr>" + "".join(f"<td>{col}</td>" for col in row) + "</tr>"
+    html += "</table>"
+    return html
+
 def send_email(to_email, otp):
     with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
         smtp.starttls()
