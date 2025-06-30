@@ -64,8 +64,8 @@ def generate():
     encrypted_id = f.encrypt(session_id.encode()).decode()
     encrypted_id_urlsafe = urllib.parse.quote(encrypted_id)
 
-    # Generate QR with request.url_root for consistency
-    data = request.url_root + 'verify/' + encrypted_id_urlsafe
+    # Generate QR with ?id=... for safety
+    data = request.url_root + 'verify?id=' + encrypted_id_urlsafe
     qr = qrcode.make(data)
     qr_path = f'static/qrs/{session_id}.png'
     qr.save(qr_path)
@@ -105,9 +105,12 @@ def totp_verify():
         </form>
     '''
 
-@app.route('/verify/<path:encrypted_id>', methods=['GET', 'POST'])
-def verify(encrypted_id):
+@app.route('/verify', methods=['GET', 'POST'])
+def verify():
     if request.method == 'GET':
+        encrypted_id = request.args.get('id')
+        if not encrypted_id:
+            return "Missing or invalid link."
         try:
             encrypted_id = urllib.parse.unquote(encrypted_id)
             session_id = f.decrypt(encrypted_id.encode()).decode()
@@ -121,13 +124,17 @@ def verify(encrypted_id):
         conn.close()
 
         if result:
-            return render_template('verify.html', session_id=session_id)
+            return render_template('verify.html', session_id=encrypted_id)
         else:
             return "Invalid or expired session."
 
     elif request.method == 'POST':
         otp_input = request.form['otp']
-        session_id = request.form['session_id']
+        encrypted_id = request.form['session_id']
+        try:
+            session_id = f.decrypt(encrypted_id.encode()).decode()
+        except InvalidToken:
+            return "Invalid or tampered link."
 
         conn = sqlite3.connect('sessions.db')
         c = conn.cursor()
@@ -138,7 +145,7 @@ def verify(encrypted_id):
         if result and otp_input == result[0]:
             return render_template('success.html')
         else:
-            return render_template('verify.html', session_id=session_id, error="Invalid OTP")
+            return render_template('verify.html', session_id=encrypted_id, error="Invalid OTP")
 
 def send_email(to_email, otp):
     with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
