@@ -61,11 +61,8 @@ def generate():
     conn.close()
 
     send_email(user_email, otp)
-    encrypted_id = f.encrypt(session_id.encode()).decode()
-    encrypted_id_urlsafe = urllib.parse.quote(encrypted_id)
-
-    # Generate QR with ?id=... for safety
-    data = request.url_root + 'verify?id=' + encrypted_id_urlsafe
+    # Use session_id directly in the QR code
+    data = request.url_root + 'verify?sid=' + session_id
     qr = qrcode.make(data)
     qr_path = f'static/qrs/{session_id}.png'
     qr.save(qr_path)
@@ -108,44 +105,30 @@ def totp_verify():
 @app.route('/verify', methods=['GET', 'POST'])
 def verify():
     if request.method == 'GET':
-        encrypted_id = request.args.get('id')
-        if not encrypted_id:
+        session_id = request.args.get('sid')
+        if not session_id:
             return "Missing or invalid link."
-        try:
-            encrypted_id = urllib.parse.unquote(encrypted_id)
-            session_id = f.decrypt(encrypted_id.encode()).decode()
-        except InvalidToken:
-            return "Invalid or tampered link."
-
         conn = sqlite3.connect('sessions.db')
         c = conn.cursor()
         c.execute("SELECT otp FROM sessions WHERE session_id=?", (session_id,))
         result = c.fetchone()
         conn.close()
-
         if result:
-            return render_template('verify.html', session_id=encrypted_id)
+            return render_template('verify.html', session_id=session_id)
         else:
             return "Invalid or expired session."
-
     elif request.method == 'POST':
         otp_input = request.form['otp']
-        encrypted_id = request.form['session_id']
-        try:
-            session_id = f.decrypt(encrypted_id.encode()).decode()
-        except InvalidToken:
-            return "Invalid or tampered link."
-
+        session_id = request.form['session_id']
         conn = sqlite3.connect('sessions.db')
         c = conn.cursor()
         c.execute("SELECT otp FROM sessions WHERE session_id=?", (session_id,))
         result = c.fetchone()
         conn.close()
-
         if result and otp_input == result[0]:
             return render_template('success.html')
         else:
-            return render_template('verify.html', session_id=encrypted_id, error="Invalid OTP")
+            return render_template('verify.html', session_id=session_id, error="Invalid OTP")
 
 def send_email(to_email, otp):
     with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
