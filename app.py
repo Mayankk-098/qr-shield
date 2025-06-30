@@ -102,30 +102,39 @@ def totp_verify():
         </form>
     '''
 
-@app.route('/verify/<encrypted_id>', methods=['GET'])
-def verify(encrypted_id):
-    try:
+@app.route('/verify', methods=['GET', 'POST'])
+def verify():
+    if request.method == 'GET':
+        encrypted_id = request.path.split('/')[-1]
         session_id = f.decrypt(encrypted_id.encode()).decode()
-    except:
-        return "Invalid or tampered link."
 
-    conn = sqlite3.connect('sessions.db')
-    c = conn.cursor()
-    c.execute("SELECT otp, expiry, status FROM sessions WHERE session_id=?", (session_id,))
-    row = c.fetchone()
-    conn.close()
+        conn = sqlite3.connect('sessions.db')
+        c = conn.cursor()
+        c.execute("SELECT otp FROM sessions WHERE session_id=?", (session_id,))
+        result = c.fetchone()
+        conn.close()
 
-    if row:
-        otp, expiry_str, status = row
-        expiry = datetime.strptime(expiry_str, "%Y-%m-%d %H:%M:%S")
-        now = datetime.now()
-
-        if now > expiry:
-            return render_template('expired.html')
+        if result:
+            return render_template('verify.html', session_id=session_id)
         else:
-            return render_template('verify.html', session_id=encrypted_id)
-    else:
-        return "Session not found."
+            return "Invalid or expired session."
+
+    elif request.method == 'POST':
+        otp_input = request.form['otp']
+        session_id = request.form['session_id']
+
+        conn = sqlite3.connect('sessions.db')
+        c = conn.cursor()
+        c.execute("SELECT otp FROM sessions WHERE session_id=?", (session_id,))
+        result = c.fetchone()
+
+        if result and otp_input == result[0]:
+            conn.close()
+            return render_template('success.html')
+        else:
+            conn.close()
+            return render_template('verify.html', session_id=session_id, error="Invalid OTP")
+
 
 @app.route('/verify', methods=['POST'])
 def verify_post():
