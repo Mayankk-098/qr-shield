@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR OTP Project</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+        }
+        .main-card {
+            box-shadow: 0 4px 32px rgba(0,0,0,0.08);
+            border-radius: 1.5rem;
+            background: #fff;
+            padding: 2.5rem 2rem 2rem 2rem;
+            margin-top: 4rem;
+            animation: fadeIn 1s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .qr-img {
+            border-radius: 1rem;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.10);
+            background: #f8fafc;
+            padding: 1rem;
+            margin-top: 1.5rem;
+            animation: fadeIn 1.2s;
+        }
+        .footer {
+            margin-top: auto;
+            padding: 1rem 0 0.5rem 0;
+            text-align: center;
+            color: #888;
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container d-flex justify-content-center align-items-center flex-column" style="min-height: 80vh;">
+        <div class="main-card w-100" style="max-width: 420px;">
+            <h1 class="mb-3 fw-bold" style="color: #2d3748; letter-spacing: 1px;">QR OTP Generator <span style="font-size:1.5rem;">🔐</span></h1>
+            <p class="mb-4 text-muted">Generate a secure OTP and receive it via email. Scan the QR code to verify!</p>
+            <form method="POST" action="/generate" class="mb-4">
+                <div class="mb-3">
+                    <input type="email" name="email" class="form-control form-control-lg" placeholder="Enter your email" required autofocus>
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg w-100 shadow-sm">Generate QR</button>
+            </form>
+            {% if qr_path %}
+                <div class="mt-4">
+                    <h5 class="mb-3">Your QR Code:</h5>
+                    <img src="{{ qr_path }}" class="img-fluid qr-img" alt="QR Code">
+                    <p class="text-muted mt-2" style="font-size:0.95rem;">Scan this QR code to verify your OTP session.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="footer">
+        &copy; {{ now().year if now else '2024' }} QR OTP Project &mdash; Secure, Simple, Fast
+    </div>
+</body>
+</html>
