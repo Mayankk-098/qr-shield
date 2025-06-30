@@ -1,7 +1,6 @@
 from cryptography.fernet import Fernet
 import sqlite3
 import pyotp
-
 from flask import Flask, render_template, request, redirect, url_for
 import qrcode
 import random
@@ -9,6 +8,7 @@ import smtplib
 import os
 from datetime import datetime, timedelta
 
+# Initialize DB
 def init_db():
     conn = sqlite3.connect('sessions.db')
     c = conn.cursor()
@@ -24,23 +24,19 @@ def init_db():
     conn.commit()
     conn.close()
 
-# Call it once on startup
 init_db()
 
-
-
-# Encryption key (save securely)
-ENCRYPTION_KEY = b'PHVvRWaCRobnyHOMy3mD6o2Jpsm40Nk7SDgvkEe7L-Y='  # Replace with your generated key
+# Encryption key
+ENCRYPTION_KEY = b'PHVvRWaCRobnyHOMy3mD6o2Jpsm40Nk7SDgvkEe7L-Y='
 f = Fernet(ENCRYPTION_KEY)
-
 
 app = Flask(__name__)
 
-# Store sessions in memory (or file if needed)
-sessions = {}
+# Deployment base URL (update if Render URL changes)
+DEPLOYMENT_URL = 'https://qr-otp-project.onrender.com/'  # your Render URL with trailing /
 
 EMAIL_ADDRESS = 'mayanktanwar2022@gmail.com'
-EMAIL_PASSWORD = 'gxzu pvgz mpjp ofbs'  # Use an app-specific password
+EMAIL_PASSWORD = 'gxzu pvgz mpjp ofbs'  # App password
 
 @app.route('/')
 def index():
@@ -53,8 +49,6 @@ def generate():
     otp = str(random.randint(1000, 9999))
     expiry = datetime.now() + timedelta(minutes=5)
 
-
-
     conn = sqlite3.connect('sessions.db')
     c = conn.cursor()
     c.execute('''
@@ -64,13 +58,11 @@ def generate():
     conn.commit()
     conn.close()
 
-
-    # Send OTP to email
     send_email(user_email, otp)
     encrypted_id = f.encrypt(session_id.encode()).decode()
 
-    # Generate QR code pointing to verify URL
-    data = request.url_root + 'verify/' + encrypted_id
+    # Generate QR with DEPLOYMENT_URL not localhost
+    data = DEPLOYMENT_URL + 'verify/' + encrypted_id
     qr = qrcode.make(data)
     qr_path = f'static/qrs/{session_id}.png'
     qr.save(qr_path)
@@ -84,29 +76,23 @@ def totp_setup():
 
     uri = pyotp.totp.TOTP(totp_secret).provisioning_uri(name="MayankQRProject", issuer_name="CyberSecurityDemo")
     qr = qrcode.make(uri)
-    qr_path = f'static/qrs/totp_setup.png'
+    qr_path = 'static/qrs/totp_setup.png'
     qr.save(qr_path)
 
     return render_template('totp_setup.html', qr_path=qr_path, secret=totp_secret)
 
 @app.route('/totp-verify', methods=['GET', 'POST'])
 def totp_verify():
-    totp_secret = "N2TMZ4ZGVLBMXLTY3YTDRVTOU3JHUI4X"  # Replace with your actual secret printed earlier
+    totp_secret = "N2TMZ4ZGVLBMXLTY3YTDRVTOU3JHUI4X"  # Replace with your real secret
 
     totp = pyotp.TOTP(totp_secret)
 
     if request.method == 'POST':
         user_otp = request.form['otp']
         if totp.verify(user_otp):
-            return '''
-                <h1 style="color:green;">✅ OTP Verified Successfully!</h1>
-                <a href="/">Go Home</a>
-            '''
+            return '<h1 style="color:green;">✅ OTP Verified Successfully!</h1><a href="/">Go Home</a>'
         else:
-            return '''
-                <h1 style="color:red;">❌ Invalid OTP.</h1>
-                <a href="/totp-verify">Try Again</a>
-            '''
+            return '<h1 style="color:red;">❌ Invalid OTP.</h1><a href="/totp-verify">Try Again</a>'
 
     return '''
         <h1>TOTP Verification 🔑</h1>
@@ -116,48 +102,55 @@ def totp_verify():
         </form>
     '''
 
+@app.route('/verify/<encrypted_id>', methods=['GET'])
+def verify(encrypted_id):
+    try:
+        session_id = f.decrypt(encrypted_id.encode()).decode()
+    except:
+        return "Invalid or tampered link."
 
+    conn = sqlite3.connect('sessions.db')
+    c = conn.cursor()
+    c.execute("SELECT otp, expiry, status FROM sessions WHERE session_id=?", (session_id,))
+    row = c.fetchone()
+    conn.close()
+
+    if row:
+        otp, expiry_str, status = row
+        expiry = datetime.strptime(expiry_str, "%Y-%m-%d %H:%M:%S")
+        now = datetime.now()
+
+        if now > expiry:
+            return render_template('expired.html')
+        else:
+            return render_template('verify.html', session_id=encrypted_id)
+    else:
+        return "Session not found."
 
 @app.route('/verify', methods=['POST'])
-def verify():
+def verify_post():
     otp_input = request.form['otp']
-    email = request.form['email']
+    encrypted_id = request.form['session_id']
+
+    try:
+        session_id = f.decrypt(encrypted_id.encode()).decode()
+    except:
+        return "Invalid or tampered data."
 
     conn = sqlite3.connect('sessions.db')
     c = conn.cursor()
+    c.execute("SELECT otp FROM sessions WHERE session_id=?", (session_id,))
+    row = c.fetchone()
 
-    c.execute("SELECT secret, created_at FROM sessions WHERE email=?", (email,))
-    result = c.fetchone()
-
-    if result:
-        secret, created_at = result
-        created_at = datetime.datetime.strptime(created_at, "%Y-%m-%d %H:%M:%S.%f")
-        now = datetime.datetime.now()
-
-        # Expiry logic: 5 minutes
-        if (now - created_at).seconds > 300:
-            log_scan(email, 'expired')
-            return render_template('expired.html')
-
-        totp = pyotp.TOTP(secret)
-        if totp.verify(otp_input):
-            log_scan(email, 'success')
+    if row:
+        otp_db = row[0]
+        if otp_input == otp_db:
             return render_template('success.html')
         else:
-            log_scan(email, 'failure')
-            return render_template('verify.html', error="Invalid OTP")
+            return render_template('verify.html', session_id=encrypted_id, error="Invalid OTP")
     else:
-        log_scan(email, 'not_found')
-        return "Session not found"
+        return "Session not found."
 
-def log_scan(email, status):
-    conn = sqlite3.connect('sessions.db')
-    c = conn.cursor()
-    c.execute("INSERT INTO scan_logs (email, scan_time, status) VALUES (?, ?, ?)",
-              (email, datetime.datetime.now(), status))
-    conn.commit()
-    conn.close()
-    
 def send_email(to_email, otp):
     with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
         smtp.starttls()
