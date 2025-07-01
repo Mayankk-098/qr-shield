@@ -1,5 +1,3 @@
-from cryptography.fernet import Fernet
-from cryptography.fernet import InvalidToken
 import sqlite3
 import pyotp
 from flask import Flask, render_template, request, redirect, url_for
@@ -8,7 +6,6 @@ import random
 import smtplib
 import os
 from datetime import datetime, timedelta
-import urllib.parse
 
 # Initialize DB
 def init_db():
@@ -43,13 +40,9 @@ def init_scan_logs():
 init_db()
 init_scan_logs()
 
-# Encryption key
-ENCRYPTION_KEY = b'PHVvRWaCRobnyHOMy3mD6o2Jpsm40Nk7SDgvkEe7L-Y='
-f = Fernet(ENCRYPTION_KEY)
-
 app = Flask(__name__)
 
-# Deployment base URL (update if Render URL changes)
+
 DEPLOYMENT_URL = 'https://qr-otp-project.onrender.com/'  # your Render URL with trailing /
 
 EMAIL_ADDRESS = 'mayanktanwar2022@gmail.com'
@@ -98,8 +91,7 @@ def totp_setup():
 
 @app.route('/totp-verify', methods=['GET', 'POST'])
 def totp_verify():
-    totp_secret = "N2TMZ4ZGVLBMXLTY3YTDRVTOU3JHUI4X"  # Replace with your real secret
-
+    totp_secret = "N2TMZ4ZGVLBMXLTY3YTDRVTOU3JHUI4X"  
     totp = pyotp.TOTP(totp_secret)
 
     if request.method == 'POST':
