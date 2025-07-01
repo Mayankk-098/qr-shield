@@ -48,7 +48,7 @@ with open('secret.key', 'rb') as key_file:
     key = key_file.read()
 f = Fernet(key)
 
-DEPLOYMENT_URL = 'https://qr-otp-project.onrender.com/'  # your Render URL with trailing /
+DEPLOYMENT_URL = 'https://qr-otp-project.onrender.com/'  # Render URL with trailing /
 
 EMAIL_ADDRESS = 'mayanktanwar2022@gmail.com'
 EMAIL_PASSWORD = 'gxzu pvgz mpjp ofbs'  # App password
