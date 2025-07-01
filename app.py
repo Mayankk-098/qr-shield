@@ -6,6 +6,7 @@ import random
 import smtplib
 import os
 from datetime import datetime, timedelta
+from cryptography.fernet import Fernet
 
 # Initialize DB
 def init_db():
@@ -42,6 +43,10 @@ init_scan_logs()
 
 app = Flask(__name__)
 
+# Load Fernet key
+with open('secret.key', 'rb') as key_file:
+    key = key_file.read()
+f = Fernet(key)
 
 DEPLOYMENT_URL = 'https://qr-otp-project.onrender.com/'  # your Render URL with trailing /
 
@@ -69,8 +74,9 @@ def generate():
     conn.close()
 
     send_email(user_email, otp)
-    # Use session_id directly in the QR code
-    data = request.url_root + 'verify?sid=' + session_id
+    # Encrypt session_id for the QR code
+    encrypted_id = f.encrypt(session_id.encode()).decode()
+    data = request.url_root + 'verify?sid=' + encrypted_id
     qr = qrcode.make(data)
     qr_path = f'static/qrs/{session_id}.png'
     qr.save(qr_path)
@@ -112,9 +118,13 @@ def totp_verify():
 @app.route('/verify', methods=['GET', 'POST'])
 def verify():
     if request.method == 'GET':
-        session_id = request.args.get('sid')
-        if not session_id:
+        encrypted_id = request.args.get('sid')
+        if not encrypted_id:
             return "Missing or invalid link."
+        try:
+            session_id = f.decrypt(encrypted_id.encode()).decode()
+        except Exception:
+            return "Invalid or tampered link."
         conn = sqlite3.connect('sessions.db')
         c = conn.cursor()
         c.execute("SELECT session_id, otp, expiry, status, created_at FROM sessions WHERE session_id=?", (session_id,))
@@ -123,19 +133,23 @@ def verify():
             expiry_str = result[2]
             expiry_time = datetime.strptime(expiry_str, "%Y-%m-%d %H:%M:%S")
             if datetime.now() > expiry_time:
-                # Log expired scan
                 c.execute('''INSERT INTO scan_logs (email, scan_time, status) VALUES (?, ?, ?)''', (None, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 'expired'))
                 conn.commit()
                 conn.close()
                 return render_template('expired.html')
             conn.close()
-            return render_template('verify.html', session_id=session_id)
+            # Pass encrypted_id to the template for the hidden field
+            return render_template('verify.html', session_id=encrypted_id)
         else:
             conn.close()
             return "Invalid or expired session."
     elif request.method == 'POST':
+        encrypted_id = request.form['session_id']
+        try:
+            session_id = f.decrypt(encrypted_id.encode()).decode()
+        except Exception:
+            return "Invalid or tampered link."
         otp_input = request.form['otp']
-        session_id = request.form['session_id']
         conn = sqlite3.connect('sessions.db')
         c = conn.cursor()
         c.execute("SELECT session_id, otp, expiry, status, created_at FROM sessions WHERE session_id=?", (session_id,))
@@ -144,26 +158,22 @@ def verify():
             expiry_str = result[2]
             expiry_time = datetime.strptime(expiry_str, "%Y-%m-%d %H:%M:%S")
             if datetime.now() > expiry_time:
-                # Log expired scan
                 c.execute('''INSERT INTO scan_logs (email, scan_time, status) VALUES (?, ?, ?)''', (None, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 'expired'))
                 conn.commit()
                 conn.close()
                 return render_template('expired.html')
             otp_db = result[1]
             if otp_input == otp_db:
-                # Update status to verified
                 c.execute("UPDATE sessions SET status=? WHERE session_id=?", ('verified', session_id))
-                # Log success
                 c.execute('''INSERT INTO scan_logs (email, scan_time, status) VALUES (?, ?, ?)''', (None, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 'success'))
                 conn.commit()
                 conn.close()
                 return render_template('success.html')
             else:
-                # Log failed attempt
                 c.execute('''INSERT INTO scan_logs (email, scan_time, status) VALUES (?, ?, ?)''', (None, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 'failed'))
                 conn.commit()
                 conn.close()
-                return render_template('verify.html', session_id=session_id, error="Invalid OTP")
+                return render_template('verify.html', session_id=encrypted_id, error="Invalid OTP")
         else:
             conn.close()
             return "Session not found."
