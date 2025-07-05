@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>QR Scan Result</title>
+    <style>
+        .safe { color: green; font-weight: bold; }
+        .danger { color: red; font-weight: bold; }
+        .unknown { color: gray; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>QR Code Scan Result</h1>
+    {% if url %}
+        <p>Extracted URL: <a href="{{ url }}" target="_blank">{{ url }}</a></p>
+        {% if verdict is none %}
+            <p class="unknown">Could not check the safety of this URL.</p>
+        {% elif verdict %}
+            <p class="safe">✅ This link appears SAFE.</p>
+            <a href="{{ url }}" target="_blank">Proceed to website</a>
+        {% else %}
+            <p class="danger">❌ WARNING: This link is DANGEROUS or flagged as phishing/malware!</p>
+        {% endif %}
+    {% else %}
+        <p>No URL found in the QR code.</p>
+    {% endif %}
+    <br>
+    <a href="/scan">Scan another</a>
+</body>
+</html> 

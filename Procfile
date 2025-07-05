@@ -1,1 +1,1 @@
-web: python app.py
+web: python phish_app.py

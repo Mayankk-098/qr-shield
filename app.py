@@ -1,15 +1,18 @@
 import sqlite3
 import pyotp
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, flash
 import qrcode
 import random
 import smtplib
 import os
 from datetime import datetime, timedelta
 from cryptography.fernet import Fernet
+from werkzeug.utils import secure_filename
+import pyzbar.pyzbar as pyzbar
+from PIL import Image
+import requests
 
-# Initialize DB
-def init_db():
+def db_shuru():
     conn = sqlite3.connect('sessions.db')
     c = conn.cursor()
     c.execute('''
@@ -24,7 +27,7 @@ def init_db():
     conn.commit()
     conn.close()
 
-def init_scan_logs():
+def scan_logs_shuru():
     conn = sqlite3.connect('sessions.db')
     c = conn.cursor()
     c.execute('''
@@ -38,20 +41,22 @@ def init_scan_logs():
     conn.commit()
     conn.close()
 
-init_db()
-init_scan_logs()
+db_shuru()
+scan_logs_shuru()
 
 app = Flask(__name__)
 
-# Load Fernet key
 with open('secret.key', 'rb') as key_file:
     key = key_file.read()
 f = Fernet(key)
 
-DEPLOYMENT_URL = 'https://qr-otp-project.onrender.com/'  # Render URL with trailing /
+DEPLOYMENT_URL = 'https://qr-otp-project.onrender.com/'
 
 EMAIL_ADDRESS = 'mayanktanwar2022@gmail.com'
-EMAIL_PASSWORD = 'gxzu pvgz mpjp ofbs'  # App password
+EMAIL_PASSWORD = 'gxzu pvgz mpjp ofbs'
+
+SAFE_BROWSING_API_KEY = 'AIzaSyBsO1ix17GKlERDqujEy-ZX54_4SI7-KRo'
+SAFE_BROWSING_API_URL = 'https://safebrowsing.googleapis.com/v4/threatMatches:find?key=' + SAFE_BROWSING_API_KEY
 
 @app.route('/')
 def index():
@@ -74,7 +79,6 @@ def generate():
     conn.close()
 
     send_email(user_email, otp)
-    # Encrypt session_id for the QR code
     encrypted_id = f.encrypt(session_id.encode()).decode()
     data = request.url_root + 'verify?sid=' + encrypted_id
     qr = qrcode.make(data)
@@ -138,7 +142,6 @@ def verify():
                 conn.close()
                 return render_template('expired.html')
             conn.close()
-            # Pass encrypted_id to the template for the hidden field
             return render_template('verify.html', session_id=encrypted_id)
         else:
             conn.close()
@@ -190,6 +193,60 @@ def view_logs():
         html += "<tr>" + "".join(f"<td>{col}</td>" for col in row) + "</tr>"
     html += "</table>"
     return html
+
+def check_url_safety(url):
+    data = {
+        "client": {
+            "clientId": "quishshield-demo",
+            "clientVersion": "1.0"
+        },
+        "threatInfo": {
+            "threatTypes": ["MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOFTWARE", "POTENTIALLY_HARMFUL_APPLICATION"],
+            "platformTypes": ["ANY_PLATFORM"],
+            "threatEntryTypes": ["URL"],
+            "threatEntries": [
+                {"url": url}
+            ]
+        }
+    }
+    response = requests.post(SAFE_BROWSING_API_URL, json=data)
+    if response.status_code == 200:
+        result = response.json()
+        if 'matches' in result:
+            return False  # Dangerous
+        else:
+            return True   # Safe
+    else:
+        return None  # Could not check
+
+@app.route('/scan', methods=['GET', 'POST'])
+def scan_qr():
+    if request.method == 'POST':
+        if 'qr_image' not in request.files:
+            flash('No file part')
+            return redirect(request.url)
+        file = request.files['qr_image']
+        if file.filename == '':
+            flash('No selected file')
+            return redirect(request.url)
+        if file:
+            filename = secure_filename(file.filename)
+            filepath = os.path.join('static', 'qrs', filename)
+            file.save(filepath)
+            # Decode QR code
+            img = Image.open(filepath)
+            decoded_objs = pyzbar.decode(img)
+            url = None
+            for obj in decoded_objs:
+                url = obj.data.decode('utf-8')
+                break
+            if url:
+                verdict = check_url_safety(url)
+                return render_template('scan_result.html', url=url, verdict=verdict)
+            else:
+                flash('No QR code detected or QR does not contain a URL.')
+                return redirect(request.url)
+    return render_template('scan.html')
 
 def send_email(to_email, otp):
     with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
