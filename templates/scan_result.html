@@ -7,19 +7,35 @@
         .safe { color: green; font-weight: bold; }
         .danger { color: red; font-weight: bold; }
         .unknown { color: gray; font-weight: bold; }
+        .suspicious { color: orange; font-weight: bold; }
     </style>
 </head>
 <body>
     <h1>QR Code Scan Result</h1>
     {% if url %}
         <p>Extracted URL: <a href="{{ url }}" target="_blank">{{ url }}</a></p>
+        <h2>Google Safe Browsing Verdict:</h2>
         {% if verdict is none %}
             <p class="unknown">Could not check the safety of this URL.</p>
         {% elif verdict %}
             <p class="safe">✅ This link appears SAFE.</p>
-            <a href="{{ url }}" target="_blank">Proceed to website</a>
         {% else %}
             <p class="danger">❌ WARNING: This link is DANGEROUS or flagged as phishing/malware!</p>
+        {% endif %}
+        <h2>URLScan.io Verdict:</h2>
+        {% if urlscan_verdict == 'safe' %}
+            <p class="safe">✅ No suspicious features detected.</p>
+        {% elif urlscan_verdict == 'suspicious' %}
+            <p class="suspicious">⚠️ Suspicious: Login form or phishing features detected!</p>
+        {% else %}
+            <p class="unknown">Could not analyze with URLScan.io.</p>
+        {% endif %}
+        {% if screenshot_url %}
+            <h3>URLScan.io Screenshot:</h3>
+            <img src="{{ screenshot_url }}" alt="URLScan Screenshot" style="max-width:400px; border:1px solid #ccc;">
+        {% endif %}
+        {% if report_url %}
+            <p><a href="{{ report_url }}" target="_blank">View full URLScan.io report</a></p>
         {% endif %}
     {% else %}
         <p>No URL found in the QR code.</p>

@@ -11,6 +11,7 @@ from werkzeug.utils import secure_filename
 import pyzbar.pyzbar as pyzbar
 from PIL import Image
 import requests
+import time
 
 def db_shuru():
     conn = sqlite3.connect('sessions.db')
@@ -57,6 +58,10 @@ EMAIL_PASSWORD = 'gxzu pvgz mpjp ofbs'
 
 SAFE_BROWSING_API_KEY = 'AIzaSyBsO1ix17GKlERDqujEy-ZX54_4SI7-KRo'
 SAFE_BROWSING_API_URL = 'https://safebrowsing.googleapis.com/v4/threatMatches:find?key=' + SAFE_BROWSING_API_KEY
+
+URLSCAN_API_KEY = '0197da5d-6852-74fe-a72e-713b6c37259e'
+URLSCAN_API_URL = 'https://urlscan.io/api/v1/scan/'
+URLSCAN_RESULT_URL = 'https://urlscan.io/api/v1/result/'
 
 @app.route('/')
 def index():
@@ -219,6 +224,26 @@ def check_url_safety(url):
     else:
         return None  # Could not check
 
+def scan_with_urlscan(url):
+    headers = {'API-Key': URLSCAN_API_KEY, 'Content-Type': 'application/json'}
+    data = {'url': url, 'public': 'off'}
+    response = requests.post(URLSCAN_API_URL, headers=headers, json=data)
+    if response.status_code == 200:
+        scan_id = response.json()['uuid']
+        # Wait for scan to complete (10 seconds)
+        time.sleep(10)
+        result = requests.get(f'{URLSCAN_RESULT_URL}{scan_id}/').json()
+        # Check for login forms or suspicious keywords
+        verdict = 'safe'
+        page_text = str(result).lower()
+        if 'login' in page_text or 'phish' in page_text or 'password' in page_text:
+            verdict = 'suspicious'
+        screenshot_url = result.get('screenshotURL')
+        report_url = f'https://urlscan.io/result/{scan_id}/'
+        return verdict, screenshot_url, report_url
+    else:
+        return 'unknown', None, None
+
 @app.route('/scan', methods=['GET', 'POST'])
 def scan_qr():
     if request.method == 'POST':
@@ -242,7 +267,8 @@ def scan_qr():
                 break
             if url:
                 verdict = check_url_safety(url)
-                return render_template('scan_result.html', url=url, verdict=verdict)
+                urlscan_verdict, screenshot_url, report_url = scan_with_urlscan(url)
+                return render_template('scan_result.html', url=url, verdict=verdict, urlscan_verdict=urlscan_verdict, screenshot_url=screenshot_url, report_url=report_url)
             else:
                 flash('No QR code detected or QR does not contain a URL.')
                 return redirect(request.url)
