@@ -79,6 +79,25 @@
                     </div>
                 {% endif %}
                 <div class="mb-3">
+                    <span class="section-title">URLhaus Malware Check:</span><br>
+                    {% if urlhaus_flag is none %}
+                        <span class="unknown">Could not check URLhaus database.</span>
+                    {% elif urlhaus_flag %}
+                        <span class="danger">❌ This URL is listed as MALICIOUS in URLhaus!</span>
+                        {% if urlhaus_data and urlhaus_data.url_status %}
+                            <div class="mt-2"><b>Status:</b> {{ urlhaus_data.url_status }}</div>
+                        {% endif %}
+                        {% if urlhaus_data and urlhaus_data.threat %}
+                            <div><b>Threat:</b> {{ urlhaus_data.threat }}</div>
+                        {% endif %}
+                        {% if urlhaus_data and urlhaus_data.tags %}
+                            <div><b>Tags:</b> {{ urlhaus_data.tags|join(', ') }}</div>
+                        {% endif %}
+                    {% else %}
+                        <span class="safe">✅ Not found in URLhaus malware database.</span>
+                    {% endif %}
+                </div>
+                <div class="mb-3">
                     <span class="section-title">Heuristic URL Pattern Checks:</span><br>
                     {% if heuristic_reasons and heuristic_reasons|length > 0 %}
                         <ul class="mb-0">
@@ -99,7 +118,7 @@
         </div>
     </div>
     <div class="footer">
-        &copy; {{ now().year if now else '2024' }} QR Security Scanner &mdash; Powered by Flask, Google Safe Browsing, URLScan.io
+        &copy; {{ now().year if now else '2024' }} QR Security Scanner &mdash; Powered by Flask, Google Safe Browsing, URLScan.io, URLhaus
     </div>
 </body>
 </html> 

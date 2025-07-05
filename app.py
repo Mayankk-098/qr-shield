@@ -42,7 +42,8 @@ def scan_qr():
                 verdict = check_url_safety(url)
                 urlscan_verdict, screenshot_url, report_url = scan_with_urlscan(url)
                 heuristic_reasons = heuristic_url_check(url)
-                return render_template('scan_result.html', url=url, verdict=verdict, urlscan_verdict=urlscan_verdict, screenshot_url=screenshot_url, report_url=report_url, heuristic_reasons=heuristic_reasons)
+                urlhaus_flag, urlhaus_data = check_urlhaus(url)
+                return render_template('scan_result.html', url=url, verdict=verdict, urlscan_verdict=urlscan_verdict, screenshot_url=screenshot_url, report_url=report_url, heuristic_reasons=heuristic_reasons, urlhaus_flag=urlhaus_flag, urlhaus_data=urlhaus_data)
             else:
                 flash('No QR code detected or QR does not contain a URL.')
                 return redirect(request.url)
@@ -116,6 +117,23 @@ def heuristic_url_check(url):
     if parsed.query and len(parsed.query) > 40:
         reasons.append('URL has a long or suspicious query string.')
     return reasons
+
+def check_urlhaus(url):
+    try:
+        response = requests.post(
+            'https://urlhaus-api.abuse.ch/v1/url/',
+            data={'url': url},
+            timeout=10
+        )
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('query_status') == 'ok':
+                return True, data  # URL is malicious
+            else:
+                return False, None  # Not found in URLhaus
+        return None, None  # Error
+    except Exception:
+        return None, None
 
 if __name__ == '__main__':
     if not os.path.exists('static/qrs'):
