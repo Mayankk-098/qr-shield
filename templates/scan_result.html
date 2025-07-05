@@ -3,54 +3,103 @@
 <head>
     <meta charset="UTF-8">
     <title>QR Scan Result</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css">
     <style>
-        .safe { color: green; font-weight: bold; }
-        .danger { color: red; font-weight: bold; }
-        .unknown { color: gray; font-weight: bold; }
-        .suspicious { color: orange; font-weight: bold; }
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+            display: flex;
+            flex-direction: column;
+        }
+        .main-card {
+            box-shadow: 0 4px 32px rgba(0,0,0,0.08);
+            border-radius: 1.5rem;
+            background: #fff;
+            padding: 2.5rem 2rem 2rem 2rem;
+            margin-top: 4rem;
+            animation: fadeIn 1s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .footer {
+            margin-top: auto;
+            padding: 1rem 0 0.5rem 0;
+            text-align: center;
+            color: #888;
+            font-size: 0.95rem;
+        }
+        .safe { color: #198754; font-weight: bold; }
+        .danger { color: #dc3545; font-weight: bold; }
+        .unknown { color: #6c757d; font-weight: bold; }
+        .suspicious { color: #fd7e14; font-weight: bold; }
+        .section-title { font-size: 1.15rem; margin-top: 1.5rem; margin-bottom: 0.5rem; color: #2d3748; }
     </style>
 </head>
 <body>
-    <h1>QR Code Scan Result</h1>
-    {% if url %}
-        <p>Extracted URL: <a href="{{ url }}" target="_blank">{{ url }}</a></p>
-        <h2>Google Safe Browsing Verdict:</h2>
-        {% if verdict is none %}
-            <p class="unknown">Could not check the safety of this URL.</p>
-        {% elif verdict %}
-            <p class="safe">✅ This link appears SAFE.</p>
-        {% else %}
-            <p class="danger">❌ WARNING: This link is DANGEROUS or flagged as phishing/malware!</p>
-        {% endif %}
-        <h2>URLScan.io Verdict:</h2>
-        {% if urlscan_verdict == 'safe' %}
-            <p class="safe">✅ No suspicious features detected.</p>
-        {% elif urlscan_verdict == 'suspicious' %}
-            <p class="suspicious">⚠️ Suspicious: Login form or phishing features detected!</p>
-        {% else %}
-            <p class="unknown">Could not analyze with URLScan.io.</p>
-        {% endif %}
-        {% if screenshot_url %}
-            <h3>URLScan.io Screenshot:</h3>
-            <img src="{{ screenshot_url }}" alt="URLScan Screenshot" style="max-width:400px; border:1px solid #ccc;">
-        {% endif %}
-        {% if report_url %}
-            <p><a href="{{ report_url }}" target="_blank">View full URLScan.io report</a></p>
-        {% endif %}
-        <h2>Heuristic URL Pattern Checks:</h2>
-        {% if heuristic_reasons and heuristic_reasons|length > 0 %}
-            <ul>
-                {% for reason in heuristic_reasons %}
-                    <li class="suspicious">⚠️ {{ reason }}</li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p class="safe">✅ No suspicious patterns detected in the URL.</p>
-        {% endif %}
-    {% else %}
-        <p>No URL found in the QR code.</p>
-    {% endif %}
-    <br>
-    <a href="/scan">Scan another</a>
+    <div class="container d-flex justify-content-center align-items-center flex-column" style="min-height: 80vh;">
+        <div class="main-card w-100" style="max-width: 520px;">
+            <h1 class="mb-3 fw-bold" style="color: #2d3748; letter-spacing: 1px;">QR Code Security Scanner <span style="font-size:1.5rem;">🛡️</span></h1>
+            {% if url %}
+                <div class="mb-3">
+                    <span class="section-title">Extracted URL:</span><br>
+                    <a href="{{ url }}" target="_blank" class="fw-semibold">{{ url }}</a>
+                </div>
+                <div class="mb-3">
+                    <span class="section-title">Google Safe Browsing Verdict:</span><br>
+                    {% if verdict is none %}
+                        <span class="unknown">Could not check the safety of this URL.</span>
+                    {% elif verdict %}
+                        <span class="safe">✅ This link appears SAFE.</span>
+                    {% else %}
+                        <span class="danger">❌ WARNING: This link is DANGEROUS or flagged as phishing/malware!</span>
+                    {% endif %}
+                </div>
+                <div class="mb-3">
+                    <span class="section-title">URLScan.io Verdict:</span><br>
+                    {% if urlscan_verdict == 'safe' %}
+                        <span class="safe">✅ No suspicious features detected.</span>
+                    {% elif urlscan_verdict == 'suspicious' %}
+                        <span class="suspicious">⚠️ Suspicious: Login form or phishing features detected!</span>
+                    {% else %}
+                        <span class="unknown">Could not analyze with URLScan.io.</span>
+                    {% endif %}
+                </div>
+                {% if screenshot_url %}
+                    <div class="mb-3">
+                        <span class="section-title">URLScan.io Screenshot:</span><br>
+                        <img src="{{ screenshot_url }}" alt="URLScan Screenshot" class="img-fluid rounded border" style="max-width:400px;">
+                    </div>
+                {% endif %}
+                {% if report_url %}
+                    <div class="mb-3">
+                        <a href="{{ report_url }}" target="_blank" class="btn btn-outline-primary btn-sm">View full URLScan.io report</a>
+                    </div>
+                {% endif %}
+                <div class="mb-3">
+                    <span class="section-title">Heuristic URL Pattern Checks:</span><br>
+                    {% if heuristic_reasons and heuristic_reasons|length > 0 %}
+                        <ul class="mb-0">
+                            {% for reason in heuristic_reasons %}
+                                <li class="suspicious">⚠️ {{ reason }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <span class="safe">✅ No suspicious patterns detected in the URL.</span>
+                    {% endif %}
+                </div>
+            {% else %}
+                <div class="alert alert-danger">No URL found in the QR code.</div>
+            {% endif %}
+            <div class="mt-4">
+                <a href="/scan" class="btn btn-secondary w-100">Scan another</a>
+            </div>
+        </div>
+    </div>
+    <div class="footer">
+        &copy; {{ now().year if now else '2024' }} QR Security Scanner &mdash; Powered by Flask, Google Safe Browsing, URLScan.io
+    </div>
 </body>
 </html> 
