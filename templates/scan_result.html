@@ -79,6 +79,16 @@
                     </div>
                 {% endif %}
                 <div class="mb-3">
+                    <span class="section-title">Hugging Face AI Phishing Verdict:</span><br>
+                    {% if hf_label is none %}
+                        <span class="unknown">Could not check with Hugging Face AI model.</span>
+                    {% elif hf_label.lower() == 'phishing' %}
+                        <span class="danger">❌ AI Verdict: PHISHING (Confidence: {{ '%.2f'|format(hf_score * 100) }}%)</span>
+                    {% else %}
+                        <span class="safe">✅ AI Verdict: BENIGN (Confidence: {{ '%.2f'|format(hf_score * 100) }}%)</span>
+                    {% endif %}
+                </div>
+                <div class="mb-3">
                     <span class="section-title">URLhaus Malware Check:</span><br>
                     {% if urlhaus_flag is none %}
                         <span class="unknown">Could not check URLhaus database.</span>
@@ -118,7 +128,7 @@
         </div>
     </div>
     <div class="footer">
-        &copy; {{ now().year if now else '2024' }} QR Security Scanner &mdash; Powered by Flask, Google Safe Browsing, URLScan.io, URLhaus
+        &copy; {{ now().year if now else '2024' }} QR Security Scanner &mdash; Powered by Flask, Google Safe Browsing, URLScan.io, URLhaus, Hugging Face AI
     </div>
 </body>
 </html> 

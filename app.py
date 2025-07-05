@@ -17,6 +17,9 @@ URLSCAN_API_KEY = '0197da5d-6852-74fe-a72e-713b6c37259e'
 URLSCAN_API_URL = 'https://urlscan.io/api/v1/scan/'
 URLSCAN_RESULT_URL = 'https://urlscan.io/api/v1/result/'
 
+HF_API_KEY = os.environ.get('HF_API_KEY')
+HF_API_URL = 'https://api-inference.huggingface.co/models/ealvaradob/bert-finetuned-phishing'
+
 @app.route('/scan', methods=['GET', 'POST'])
 def scan_qr():
     if request.method == 'POST':
@@ -43,7 +46,8 @@ def scan_qr():
                 urlscan_verdict, screenshot_url, report_url = scan_with_urlscan(url)
                 heuristic_reasons = heuristic_url_check(url)
                 urlhaus_flag, urlhaus_data = check_urlhaus(url)
-                return render_template('scan_result.html', url=url, verdict=verdict, urlscan_verdict=urlscan_verdict, screenshot_url=screenshot_url, report_url=report_url, heuristic_reasons=heuristic_reasons, urlhaus_flag=urlhaus_flag, urlhaus_data=urlhaus_data)
+                hf_label, hf_score = huggingface_phishing_check(url)
+                return render_template('scan_result.html', url=url, verdict=verdict, urlscan_verdict=urlscan_verdict, screenshot_url=screenshot_url, report_url=report_url, heuristic_reasons=heuristic_reasons, urlhaus_flag=urlhaus_flag, urlhaus_data=urlhaus_data, hf_label=hf_label, hf_score=hf_score)
             else:
                 flash('No QR code detected or QR does not contain a URL.')
                 return redirect(request.url)
@@ -132,6 +136,22 @@ def check_urlhaus(url):
             else:
                 return False, None  # Not found in URLhaus
         return None, None  # Error
+    except Exception:
+        return None, None
+
+def huggingface_phishing_check(url):
+    headers = {"Authorization": f"Bearer {HF_API_KEY}"}
+    payload = {"inputs": url}
+    try:
+        response = requests.post(HF_API_URL, headers=headers, json=payload, timeout=15)
+        if response.status_code == 200:
+            result = response.json()
+            # The model returns a list of dicts with 'label' and 'score'
+            if isinstance(result, list) and result:
+                label = result[0]['label']
+                score = result[0]['score']
+                return label, score
+        return None, None
     except Exception:
         return None, None
 
