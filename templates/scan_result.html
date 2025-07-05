@@ -37,6 +37,16 @@
         {% if report_url %}
             <p><a href="{{ report_url }}" target="_blank">View full URLScan.io report</a></p>
         {% endif %}
+        <h2>Heuristic URL Pattern Checks:</h2>
+        {% if heuristic_reasons and heuristic_reasons|length > 0 %}
+            <ul>
+                {% for reason in heuristic_reasons %}
+                    <li class="suspicious">⚠️ {{ reason }}</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="safe">✅ No suspicious patterns detected in the URL.</p>
+        {% endif %}
     {% else %}
         <p>No URL found in the QR code.</p>
     {% endif %}

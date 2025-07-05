@@ -12,6 +12,8 @@ import pyzbar.pyzbar as pyzbar
 from PIL import Image
 import requests
 import time
+import re
+from urllib.parse import urlparse
 
 def db_shuru():
     conn = sqlite3.connect('sessions.db')
@@ -244,6 +246,30 @@ def scan_with_urlscan(url):
     else:
         return 'unknown', None, None
 
+def heuristic_url_check(url):
+    reasons = []
+    parsed = urlparse(url)
+    # 1. IP address in netloc
+    if re.match(r'^\d+\.\d+\.\d+\.\d+$', parsed.hostname or ''):
+        reasons.append('URL uses an IP address instead of a domain name.')
+    # 2. Suspicious TLDs
+    suspicious_tlds = ['.tk', '.ml', '.ga', '.cf', '.gq']
+    if parsed.hostname and any(parsed.hostname.endswith(tld) for tld in suspicious_tlds):
+        reasons.append('URL uses a suspicious TLD (e.g., .tk, .ml, .ga, .cf, .gq).')
+    # 3. No HTTPS
+    if parsed.scheme != 'https':
+        reasons.append('URL does not use HTTPS.')
+    # 4. Excessive subdomains
+    if parsed.hostname and len(parsed.hostname.split('.')) > 3:
+        reasons.append('URL has excessive subdomains.')
+    # 5. Punycode or lookalike domains
+    if parsed.hostname and ('xn--' in parsed.hostname or re.search(r'\d', parsed.hostname)):
+        reasons.append('URL may use punycode or lookalike domain (e.g., g00gle.com).')
+    # 6. Long/random query string
+    if parsed.query and len(parsed.query) > 40:
+        reasons.append('URL has a long or suspicious query string.')
+    return reasons
+
 @app.route('/scan', methods=['GET', 'POST'])
 def scan_qr():
     if request.method == 'POST':
@@ -268,7 +294,8 @@ def scan_qr():
             if url:
                 verdict = check_url_safety(url)
                 urlscan_verdict, screenshot_url, report_url = scan_with_urlscan(url)
-                return render_template('scan_result.html', url=url, verdict=verdict, urlscan_verdict=urlscan_verdict, screenshot_url=screenshot_url, report_url=report_url)
+                heuristic_reasons = heuristic_url_check(url)
+                return render_template('scan_result.html', url=url, verdict=verdict, urlscan_verdict=urlscan_verdict, screenshot_url=screenshot_url, report_url=report_url, heuristic_reasons=heuristic_reasons)
             else:
                 flash('No QR code detected or QR does not contain a URL.')
                 return redirect(request.url)
