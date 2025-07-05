@@ -2,22 +2,61 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Scan QR Code</title>
+    <title>QR Code Security Scanner</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+            display: flex;
+            flex-direction: column;
+        }
+        .main-card {
+            box-shadow: 0 4px 32px rgba(0,0,0,0.08);
+            border-radius: 1.5rem;
+            background: #fff;
+            padding: 2.5rem 2rem 2rem 2rem;
+            margin-top: 4rem;
+            animation: fadeIn 1s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .footer {
+            margin-top: auto;
+            padding: 1rem 0 0.5rem 0;
+            text-align: center;
+            color: #888;
+            font-size: 0.95rem;
+        }
+    </style>
 </head>
 <body>
-    <h1>Upload a QR Code Image</h1>
-    <form method="POST" enctype="multipart/form-data">
-        <input type="file" name="qr_image" accept="image/*" required>
-        <button type="submit">Scan</button>
-    </form>
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}
-        <ul>
-        {% for message in messages %}
-          <li>{{ message }}</li>
-        {% endfor %}
-        </ul>
-      {% endif %}
-    {% endwith %}
+    <div class="container d-flex justify-content-center align-items-center flex-column" style="min-height: 80vh;">
+        <div class="main-card w-100" style="max-width: 420px;">
+            <h1 class="mb-3 fw-bold" style="color: #2d3748; letter-spacing: 1px;">QR Code Security Scanner <span style="font-size:1.5rem;">🛡️</span></h1>
+            <p class="mb-4 text-muted">Upload a QR code image to check if the embedded link is safe or suspicious using multiple security checks.</p>
+            <form method="POST" enctype="multipart/form-data" class="mb-4">
+                <div class="mb-3">
+                    <input type="file" name="qr_image" accept="image/*" class="form-control form-control-lg" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg w-100 shadow-sm">Scan QR Code</button>
+            </form>
+            {% with messages = get_flashed_messages() %}
+              {% if messages %}
+                <div class="alert alert-warning mt-3">
+                {% for message in messages %}
+                  <div>{{ message }}</div>
+                {% endfor %}
+                </div>
+              {% endif %}
+            {% endwith %}
+        </div>
+    </div>
+    <div class="footer">
+        &copy; {{ now().year if now else '2024' }} QR Security Scanner &mdash; Powered by Flask, Google Safe Browsing, URLScan.io
+    </div>
 </body>
 </html> 
