@@ -10,6 +10,7 @@ import re
 from urllib.parse import urlparse
 
 app = Flask(__name__)
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'dev-secret-key')
 
 SAFE_BROWSING_API_KEY = os.environ.get('SAFE_BROWSING_API_KEY')
 SAFE_BROWSING_API_URL = 'https://safebrowsing.googleapis.com/v4/threatMatches:find?key=' + SAFE_BROWSING_API_KEY
