@@ -131,37 +131,46 @@ def heuristic_url_check(url):
     return reasons
 
 def check_urlhaus(url):
-    try:
-        response = requests.post(
-            'https://urlhaus-api.abuse.ch/v1/url/',
-            data={'url': url},
-            timeout=10
-        )
-        if response.status_code == 200:
-            data = response.json()
-            if data.get('query_status') == 'ok':
-                return True, data  # URL is malicious
-            else:
-                return False, None  # Not found in URLhaus
-        return None, None  # Error
-    except Exception:
-        return None, None
+    for _ in range(3):
+        try:
+            response = requests.post(
+                'https://urlhaus-api.abuse.ch/v1/url/',
+                data={'url': url},
+                timeout=10
+            )
+            print("URLhaus status:", response.status_code)
+            print("URLhaus response:", response.text)
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('query_status') == 'ok':
+                    return True, data  # URL is malicious
+                else:
+                    return False, None  # Not found in URLhaus
+            time.sleep(2)
+        except Exception as e:
+            print("URLhaus exception:", e)
+            time.sleep(2)
+    return None, None
 
 def huggingface_phishing_check(url):
     headers = {"Authorization": f"Bearer {HF_API_KEY}"}
     payload = {"inputs": url}
-    try:
-        response = requests.post(HF_API_URL, headers=headers, json=payload, timeout=15)
-        if response.status_code == 200:
-            result = response.json()
-            # The model returns a list of dicts with 'label' and 'score'
-            if isinstance(result, list) and result:
-                label = result[0]['label']
-                score = result[0]['score']
-                return label, score
-        return None, None
-    except Exception:
-        return None, None
+    for _ in range(3):
+        try:
+            response = requests.post(HF_API_URL, headers=headers, json=payload, timeout=15)
+            print("HF API status:", response.status_code)
+            print("HF API response:", response.text)
+            if response.status_code == 200:
+                result = response.json()
+                if isinstance(result, list) and result:
+                    label = result[0]['label']
+                    score = result[0]['score']
+                    return label, score
+            time.sleep(2)
+        except Exception as e:
+            print("HF API exception:", e)
+            time.sleep(2)
+    return None, None
 
 if __name__ == '__main__':
     if not os.path.exists('static/qrs'):
