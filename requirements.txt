@@ -1,6 +1,7 @@
 flask
-qrcode
+opencv-python
+pillow
+requests
 cryptography
 pyotp
 gunicorn
-Pillow

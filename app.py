@@ -1,8 +1,9 @@
 from flask import Flask, render_template, request, redirect, flash
 from werkzeug.utils import secure_filename
 import os
-import pyzbar.pyzbar as pyzbar
+import cv2
 from PIL import Image
+import numpy as np
 import requests
 import time
 import re
@@ -10,15 +11,21 @@ from urllib.parse import urlparse
 
 app = Flask(__name__)
 
-SAFE_BROWSING_API_KEY = 'AIzaSyBsO1ix17GKlERDqujEy-ZX54_4SI7-KRo'
+SAFE_BROWSING_API_KEY = os.environ.get('SAFE_BROWSING_API_KEY')
 SAFE_BROWSING_API_URL = 'https://safebrowsing.googleapis.com/v4/threatMatches:find?key=' + SAFE_BROWSING_API_KEY
 
-URLSCAN_API_KEY = '0197da5d-6852-74fe-a72e-713b6c37259e'
+URLSCAN_API_KEY = os.environ.get('URLSCAN_API_KEY')
 URLSCAN_API_URL = 'https://urlscan.io/api/v1/scan/'
 URLSCAN_RESULT_URL = 'https://urlscan.io/api/v1/result/'
 
 HF_API_KEY = os.environ.get('HF_API_KEY')
 HF_API_URL = 'https://api-inference.huggingface.co/models/ealvaradob/bert-finetuned-phishing'
+
+print("SAFE_BROWSING_API_KEY:", SAFE_BROWSING_API_KEY)
+
+@app.route('/')
+def index():
+    return redirect('/scan')
 
 @app.route('/scan', methods=['GET', 'POST'])
 def scan_qr():
@@ -34,13 +41,11 @@ def scan_qr():
             filename = secure_filename(file.filename)
             filepath = os.path.join('static', 'qrs', filename)
             file.save(filepath)
-            # Decode QR code
-            img = Image.open(filepath)
-            decoded_objs = pyzbar.decode(img)
-            url = None
-            for obj in decoded_objs:
-                url = obj.data.decode('utf-8')
-                break
+            # Decode QR code using OpenCV
+            img = cv2.imread(filepath)
+            detector = cv2.QRCodeDetector()
+            data, bbox, _ = detector.detectAndDecode(img)
+            url = data if data else None
             if url:
                 verdict = check_url_safety(url)
                 urlscan_verdict, screenshot_url, report_url = scan_with_urlscan(url)
