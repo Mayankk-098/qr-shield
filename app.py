@@ -44,8 +44,10 @@ def scan_qr():
             file.save(filepath)
             # Decode QR code using OpenCV
             img = cv2.imread(filepath)
+            print("Image loaded:", img is not None)
             detector = cv2.QRCodeDetector()
             data, bbox, _ = detector.detectAndDecode(img)
+            print("QR data:", data)
             url = data if data else None
             if url:
                 verdict = check_url_safety(url)
