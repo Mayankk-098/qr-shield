@@ -87,8 +87,8 @@ def scan_with_urlscan(url):
     response = requests.post(URLSCAN_API_URL, headers=headers, json=data)
     if response.status_code == 200:
         scan_id = response.json()['uuid']
-        # Wait for scan to complete (10 seconds)
-        time.sleep(10)
+        # Wait for scan to complete (5 seconds)
+        time.sleep(5)
         result = requests.get(f'{URLSCAN_RESULT_URL}{scan_id}/').json()
         # Check for login forms or suspicious keywords
         verdict = 'safe'
