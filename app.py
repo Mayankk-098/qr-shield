@@ -19,9 +19,6 @@ URLSCAN_API_KEY = os.environ.get('URLSCAN_API_KEY')
 URLSCAN_API_URL = 'https://urlscan.io/api/v1/scan/'
 URLSCAN_RESULT_URL = 'https://urlscan.io/api/v1/result/'
 
-HF_API_KEY = os.environ.get('HF_API_KEY')
-HF_API_URL = 'https://api-inference.huggingface.co/models/ealvaradob/bert-finetuned-phishing'
-
 print("SAFE_BROWSING_API_KEY:", SAFE_BROWSING_API_KEY)
 
 @app.route('/')
@@ -53,9 +50,7 @@ def scan_qr():
                 verdict = check_url_safety(url)
                 urlscan_verdict, screenshot_url, report_url = scan_with_urlscan(url)
                 heuristic_reasons = heuristic_url_check(url)
-                urlhaus_flag, urlhaus_data = check_urlhaus(url)
-                hf_label, hf_score = huggingface_phishing_check(url)
-                return render_template('scan_result.html', url=url, verdict=verdict, urlscan_verdict=urlscan_verdict, screenshot_url=screenshot_url, report_url=report_url, heuristic_reasons=heuristic_reasons, urlhaus_flag=urlhaus_flag, urlhaus_data=urlhaus_data, hf_label=hf_label, hf_score=hf_score)
+                return render_template('scan_result.html', url=url, verdict=verdict, urlscan_verdict=urlscan_verdict, screenshot_url=screenshot_url, report_url=report_url, heuristic_reasons=heuristic_reasons)
             else:
                 flash('No QR code detected or QR does not contain a URL.')
                 return redirect(request.url)
@@ -129,48 +124,6 @@ def heuristic_url_check(url):
     if parsed.query and len(parsed.query) > 40:
         reasons.append('URL has a long or suspicious query string.')
     return reasons
-
-def check_urlhaus(url):
-    for _ in range(3):
-        try:
-            response = requests.post(
-                'https://urlhaus-api.abuse.ch/v1/url/',
-                data={'url': url},
-                timeout=10
-            )
-            print("URLhaus status:", response.status_code)
-            print("URLhaus response:", response.text)
-            if response.status_code == 200:
-                data = response.json()
-                if data.get('query_status') == 'ok':
-                    return True, data  # URL is malicious
-                else:
-                    return False, None  # Not found in URLhaus
-            time.sleep(2)
-        except Exception as e:
-            print("URLhaus exception:", e)
-            time.sleep(2)
-    return None, None
-
-def huggingface_phishing_check(url):
-    headers = {"Authorization": f"Bearer {HF_API_KEY}"}
-    payload = {"inputs": url}
-    for _ in range(3):
-        try:
-            response = requests.post(HF_API_URL, headers=headers, json=payload, timeout=15)
-            print("HF API status:", response.status_code)
-            print("HF API response:", response.text)
-            if response.status_code == 200:
-                result = response.json()
-                if isinstance(result, list) and result:
-                    label = result[0]['label']
-                    score = result[0]['score']
-                    return label, score
-            time.sleep(2)
-        except Exception as e:
-            print("HF API exception:", e)
-            time.sleep(2)
-    return None, None
 
 if __name__ == '__main__':
     if not os.path.exists('static/qrs'):

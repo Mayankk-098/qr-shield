@@ -43,82 +43,81 @@
         <div class="main-card w-100" style="max-width: 520px;">
             <h1 class="mb-3 fw-bold" style="color: #2d3748; letter-spacing: 1px;">QR Code Security Scanner <span style="font-size:1.5rem;">🛡️</span></h1>
             {% if url %}
-                <div class="mb-3">
-                    <span class="section-title">Extracted URL:</span><br>
-                    <a href="{{ url }}" target="_blank" class="fw-semibold">{{ url }}</a>
-                </div>
-                <div class="mb-3">
-                    <span class="section-title">Google Safe Browsing Verdict:</span><br>
-                    {% if verdict is none %}
-                        <span class="unknown">Could not check the safety of this URL.</span>
-                    {% elif verdict %}
-                        <span class="safe">✅ This link appears SAFE.</span>
+                <div class="overall-verdict {% if verdict == True %}verdict-safe{% elif verdict == False %}verdict-dangerous{% else %}verdict-unknown{% endif %}">
+                    {% if verdict == True %}
+                        ✅ SAFE - This URL appears to be secure
+                    {% elif verdict == False %}
+                        ⚠️ DANGEROUS - This URL may be malicious
                     {% else %}
-                        <span class="danger">❌ WARNING: This link is DANGEROUS or flagged as phishing/malware!</span>
+                        ❓ UNKNOWN - Could not determine safety
                     {% endif %}
                 </div>
-                <div class="mb-3">
-                    <span class="section-title">URLScan.io Verdict:</span><br>
-                    {% if urlscan_verdict == 'safe' %}
-                        <span class="safe">✅ No suspicious features detected.</span>
-                    {% elif urlscan_verdict == 'suspicious' %}
-                        <span class="suspicious">⚠️ Suspicious: Login form or phishing features detected!</span>
-                    {% else %}
-                        <span class="unknown">Could not analyze with URLScan.io.</span>
-                    {% endif %}
-                </div>
-                {% if screenshot_url %}
-                    <div class="mb-3">
-                        <span class="section-title">URLScan.io Screenshot:</span><br>
-                        <img src="{{ screenshot_url }}" alt="URLScan Screenshot" class="img-fluid rounded border" style="max-width:400px;">
+                
+                <div class="security-checks">
+                    <!-- Google Safe Browsing -->
+                    <div class="check-card">
+                        <div class="check-header">
+                            <span class="check-icon">🛡️</span>
+                            Google Safe Browsing
+                            <span class="check-status {% if verdict == True %}status-safe{% elif verdict == False %}status-dangerous{% else %}status-unknown{% endif %}">
+                                {% if verdict == True %}SAFE{% elif verdict == False %}DANGEROUS{% else %}UNKNOWN{% endif %}
+                            </span>
+                        </div>
+                        <div class="check-details">
+                            {% if verdict == True %}
+                                URL not found in Google's Safe Browsing database.
+                            {% elif verdict == False %}
+                                URL flagged as potentially harmful by Google Safe Browsing.
+                            {% else %}
+                                Could not verify with Google Safe Browsing API.
+                            {% endif %}
+                        </div>
                     </div>
-                {% endif %}
-                {% if report_url %}
-                    <div class="mb-3">
-                        <a href="{{ report_url }}" target="_blank" class="btn btn-outline-primary btn-sm">View full URLScan.io report</a>
+                    
+                    <!-- URLScan.io -->
+                    <div class="check-card">
+                        <div class="check-header">
+                            <span class="check-icon">🔍</span>
+                            URLScan.io Analysis
+                            <span class="check-status {% if urlscan_verdict == 'safe' %}status-safe{% elif urlscan_verdict == 'suspicious' %}status-dangerous{% else %}status-unknown{% endif %}">
+                                {% if urlscan_verdict == 'safe' %}SAFE{% elif urlscan_verdict == 'suspicious' %}SUSPICIOUS{% else %}UNKNOWN{% endif %}
+                            </span>
+                        </div>
+                        <div class="check-details">
+                            {% if urlscan_verdict == 'safe' %}
+                                No suspicious content detected in sandboxed analysis.
+                            {% elif urlscan_verdict == 'suspicious' %}
+                                Suspicious content detected (login forms, phishing indicators).
+                            {% else %}
+                                Could not perform URLScan.io analysis.
+                            {% endif %}
+                            {% if report_url %}
+                                <br><a href="{{ report_url }}" target="_blank">View Full Report</a>
+                            {% endif %}
+                        </div>
                     </div>
+                </div>
+                
+                <!-- Heuristic Analysis -->
+                {% if heuristic_reasons %}
+                <div class="check-card">
+                    <div class="check-header">
+                        <span class="check-icon">🔬</span>
+                        Heuristic Analysis
+                        <span class="check-status status-dangerous">SUSPICIOUS</span>
+                    </div>
+                    <div class="check-details">
+                        <div class="heuristic-reasons">
+                            <strong>Suspicious patterns detected:</strong>
+                            <ul>
+                                {% for reason in heuristic_reasons %}
+                                    <li>{{ reason }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
                 {% endif %}
-                <div class="mb-3">
-                    <span class="section-title">Hugging Face AI Phishing Verdict:</span><br>
-                    {% if hf_label is none %}
-                        <span class="unknown">Could not check with Hugging Face AI model.</span>
-                    {% elif hf_label.lower() == 'phishing' %}
-                        <span class="danger">❌ AI Verdict: PHISHING (Confidence: {{ '%.2f'|format(hf_score * 100) }}%)</span>
-                    {% else %}
-                        <span class="safe">✅ AI Verdict: BENIGN (Confidence: {{ '%.2f'|format(hf_score * 100) }}%)</span>
-                    {% endif %}
-                </div>
-                <div class="mb-3">
-                    <span class="section-title">URLhaus Malware Check:</span><br>
-                    {% if urlhaus_flag is none %}
-                        <span class="unknown">Could not check URLhaus database.</span>
-                    {% elif urlhaus_flag %}
-                        <span class="danger">❌ This URL is listed as MALICIOUS in URLhaus!</span>
-                        {% if urlhaus_data and urlhaus_data.url_status %}
-                            <div class="mt-2"><b>Status:</b> {{ urlhaus_data.url_status }}</div>
-                        {% endif %}
-                        {% if urlhaus_data and urlhaus_data.threat %}
-                            <div><b>Threat:</b> {{ urlhaus_data.threat }}</div>
-                        {% endif %}
-                        {% if urlhaus_data and urlhaus_data.tags %}
-                            <div><b>Tags:</b> {{ urlhaus_data.tags|join(', ') }}</div>
-                        {% endif %}
-                    {% else %}
-                        <span class="safe">✅ Not found in URLhaus malware database.</span>
-                    {% endif %}
-                </div>
-                <div class="mb-3">
-                    <span class="section-title">Heuristic URL Pattern Checks:</span><br>
-                    {% if heuristic_reasons and heuristic_reasons|length > 0 %}
-                        <ul class="mb-0">
-                            {% for reason in heuristic_reasons %}
-                                <li class="suspicious">⚠️ {{ reason }}</li>
-                            {% endfor %}
-                        </ul>
-                    {% else %}
-                        <span class="safe">✅ No suspicious patterns detected in the URL.</span>
-                    {% endif %}
-                </div>
             {% else %}
                 <div class="alert alert-danger">No URL found in the QR code.</div>
             {% endif %}
