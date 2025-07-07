@@ -36,6 +36,52 @@
         .unknown { color: #6c757d; font-weight: bold; }
         .suspicious { color: #fd7e14; font-weight: bold; }
         .section-title { font-size: 1.15rem; margin-top: 1.5rem; margin-bottom: 0.5rem; color: #2d3748; }
+        .verdict-safe {
+            background: #e3f2fd;
+            color: #1565c0;
+            border: 2px solid #90caf9;
+            font-size: 2em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 25px 10px;
+            border-radius: 10px;
+        }
+        .verdict-dangerous {
+            background: #ffebee;
+            color: #c62828;
+            border: 2px solid #ef9a9a;
+            font-size: 2.2em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 30px 10px;
+            border-radius: 10px;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 8px #ffcdd2;
+        }
+        .verdict-unknown {
+            background: #fffde7;
+            color: #f9a825;
+            border: 2px solid #ffe082;
+            font-size: 1.5em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px 10px;
+            border-radius: 10px;
+        }
+        .verdict-suspicious {
+            background: #fff3e0;
+            color: #ef6c00;
+            border: 2px solid #ffb74d;
+            font-size: 1.3em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 15px 10px;
+            border-radius: 10px;
+        }
     </style>
 </head>
 <body>
@@ -43,15 +89,13 @@
         <div class="main-card w-100" style="max-width: 520px;">
             <h1 class="mb-3 fw-bold" style="color: #2d3748; letter-spacing: 1px;">QR Code Security Scanner <span style="font-size:1.5rem;">🛡️</span></h1>
             {% if url %}
-                <div class="overall-verdict {% if verdict == True %}verdict-safe{% elif verdict == False %}verdict-dangerous{% else %}verdict-unknown{% endif %}">
-                    {% if verdict == True %}
-                        ✅ SAFE - This URL appears to be secure
-                    {% elif verdict == False %}
-                        ⚠️ DANGEROUS - This URL may be malicious
-                    {% else %}
-                        ❓ UNKNOWN - Could not determine safety
-                    {% endif %}
-                </div>
+                {% if verdict == True %}
+                    <div class="verdict-safe">✅ SAFE - This URL appears to be secure</div>
+                {% elif verdict == False %}
+                    <div class="verdict-dangerous">⚠️ DANGEROUS - This URL may be malicious</div>
+                {% else %}
+                    <div class="verdict-unknown">❓ UNKNOWN - Could not determine safety</div>
+                {% endif %}
                 
                 <div class="security-checks">
                     <!-- Google Safe Browsing -->
@@ -100,6 +144,7 @@
                 
                 <!-- Heuristic Analysis -->
                 {% if heuristic_reasons %}
+                <div class="verdict-suspicious">🔬 Heuristic Analysis SUSPICIOUS</div>
                 <div class="check-card">
                     <div class="check-header">
                         <span class="check-icon">🔬</span>
