@@ -61,6 +61,7 @@
                 </div>
                 <div id="qr-video-region"></div>
                 <div class="d-grid gap-2 mt-2">
+                    <button id="capture-scan-btn" class="btn btn-primary" type="button">Capture & Scan</button>
                     <button id="cancel-camera-btn" class="btn btn-outline-danger" type="button">Cancel</button>
                 </div>
                 <div id="camera-error" class="alert alert-danger mt-2" style="display:none;"></div>
@@ -75,9 +76,11 @@
                 const resultForm = document.getElementById('camera-result-form');
                 const resultInput = document.getElementById('qr-camera-result');
                 const cancelBtn = document.getElementById('cancel-camera-btn');
+                const captureBtn = document.getElementById('capture-scan-btn');
                 const loadingSpinner = document.getElementById('camera-loading');
                 const errorDiv = document.getElementById('camera-error');
                 let html5Qr;
+                let isCameraRunning = false;
                 scanBtn.addEventListener('click', function() {
                     scanBtn.style.display = 'none';
                     scannerDiv.style.display = 'block';
@@ -100,6 +103,7 @@
                             errorMessage => {}
                         ).then(() => {
                             loadingSpinner.style.display = 'none';
+                            isCameraRunning = true;
                         }).catch(err => {
                             errorDiv.textContent = 'Camera error: ' + err;
                             errorDiv.style.display = 'block';
@@ -109,24 +113,61 @@
                         });
                     }, 300);
                 });
+                captureBtn.addEventListener('click', function() {
+                    if (!html5Qr || !isCameraRunning) return;
+                    html5Qr.getRunningTrackSettings().then(settings => {
+                        const video = document.querySelector('#qr-video-region video');
+                        if (!video) {
+                            errorDiv.textContent = 'Video element not found.';
+                            errorDiv.style.display = 'block';
+                            return;
+                        }
+                        // Create a canvas to capture the frame
+                        const canvas = document.createElement('canvas');
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        canvas.toBlob(blob => {
+                            const file = new File([blob], 'capture.png', { type: 'image/png' });
+                            html5Qr.scanFile(file, true)
+                                .then(qrCodeMessage => {
+                                    html5Qr.stop().then(() => {
+                                        scannerDiv.style.display = 'none';
+                                        scanBtn.style.display = 'block';
+                                        loadingSpinner.style.display = 'none';
+                                        resultInput.value = qrCodeMessage;
+                                        resultForm.submit();
+                                    });
+                                })
+                                .catch(() => {
+                                    errorDiv.textContent = 'No QR code found in captured image.';
+                                    errorDiv.style.display = 'block';
+                                });
+                        }, 'image/png');
+                    });
+                });
                 cancelBtn.addEventListener('click', function() {
-                    if (html5Qr) {
+                    if (html5Qr && isCameraRunning) {
                         html5Qr.stop().then(() => {
                             scannerDiv.style.display = 'none';
                             scanBtn.style.display = 'block';
                             loadingSpinner.style.display = 'none';
                             errorDiv.style.display = 'none';
+                            isCameraRunning = false;
                         }).catch(() => {
                             scannerDiv.style.display = 'none';
                             scanBtn.style.display = 'block';
                             loadingSpinner.style.display = 'none';
                             errorDiv.style.display = 'none';
+                            isCameraRunning = false;
                         });
                     } else {
                         scannerDiv.style.display = 'none';
                         scanBtn.style.display = 'block';
                         loadingSpinner.style.display = 'none';
                         errorDiv.style.display = 'none';
+                        isCameraRunning = false;
                     }
                 });
             </script>
