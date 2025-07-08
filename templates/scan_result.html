@@ -163,6 +163,15 @@
                     </div>
                 </div>
                 {% endif %}
+                <div class="mt-4">
+                    {% if verdict == True %}
+                        <a href="{{ url }}" target="_blank" rel="noopener noreferrer" class="btn btn-success w-100 mb-2">You can continue to this link</a>
+                    {% elif verdict == False %}
+                        <a href="{{ url }}" target="_blank" rel="noopener noreferrer" class="btn btn-danger w-100 mb-2">Open anyway (not recommended)</a>
+                    {% else %}
+                        <a href="{{ url }}" target="_blank" rel="noopener noreferrer" class="btn btn-warning w-100 mb-2">Proceed with caution</a>
+                    {% endif %}
+                </div>
             {% else %}
                 <div class="alert alert-danger">No URL found in the QR code.</div>
             {% endif %}
