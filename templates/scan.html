@@ -44,6 +44,92 @@
                 </div>
                 <button type="submit" class="btn btn-primary btn-lg w-100 shadow-sm">Scan QR Code</button>
             </form>
+            <div class="text-center mb-3">
+                <span class="text-muted">or</span>
+            </div>
+            <div class="d-grid gap-2 mb-3">
+                <button id="camera-scan-btn" class="btn btn-outline-success btn-lg" type="button">Scan with Camera</button>
+            </div>
+            <div id="camera-scanner" style="display:none; margin-bottom:1.5rem;">
+                <div class="text-center mb-2">
+                    <span id="camera-loading" style="display:none;">
+                        <div class="spinner-border text-success" role="status" style="width:2.5rem; height:2.5rem;">
+                          <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <div class="mt-2 text-muted">Starting camera...</div>
+                    </span>
+                </div>
+                <div id="qr-video-region"></div>
+                <div class="d-grid gap-2 mt-2">
+                    <button id="cancel-camera-btn" class="btn btn-outline-danger" type="button">Cancel</button>
+                </div>
+                <div id="camera-error" class="alert alert-danger mt-2" style="display:none;"></div>
+            </div>
+            <form id="camera-result-form" method="POST" style="display:none;">
+                <input type="hidden" name="qr_image" id="qr-camera-result">
+            </form>
+            <script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
+            <script>
+                const scanBtn = document.getElementById('camera-scan-btn');
+                const scannerDiv = document.getElementById('camera-scanner');
+                const resultForm = document.getElementById('camera-result-form');
+                const resultInput = document.getElementById('qr-camera-result');
+                const cancelBtn = document.getElementById('cancel-camera-btn');
+                const loadingSpinner = document.getElementById('camera-loading');
+                const errorDiv = document.getElementById('camera-error');
+                let html5Qr;
+                scanBtn.addEventListener('click', function() {
+                    scanBtn.style.display = 'none';
+                    scannerDiv.style.display = 'block';
+                    loadingSpinner.style.display = 'inline-block';
+                    errorDiv.style.display = 'none';
+                    setTimeout(() => {
+                        html5Qr = new Html5Qrcode("qr-video-region");
+                        html5Qr.start(
+                            { facingMode: "environment" },
+                            { fps: 10, qrbox: 250 },
+                            qrCodeMessage => {
+                                html5Qr.stop().then(() => {
+                                    scannerDiv.style.display = 'none';
+                                    scanBtn.style.display = 'block';
+                                    loadingSpinner.style.display = 'none';
+                                    resultInput.value = qrCodeMessage;
+                                    resultForm.submit();
+                                });
+                            },
+                            errorMessage => {}
+                        ).then(() => {
+                            loadingSpinner.style.display = 'none';
+                        }).catch(err => {
+                            errorDiv.textContent = 'Camera error: ' + err;
+                            errorDiv.style.display = 'block';
+                            scanBtn.style.display = 'block';
+                            scannerDiv.style.display = 'none';
+                            loadingSpinner.style.display = 'none';
+                        });
+                    }, 300);
+                });
+                cancelBtn.addEventListener('click', function() {
+                    if (html5Qr) {
+                        html5Qr.stop().then(() => {
+                            scannerDiv.style.display = 'none';
+                            scanBtn.style.display = 'block';
+                            loadingSpinner.style.display = 'none';
+                            errorDiv.style.display = 'none';
+                        }).catch(() => {
+                            scannerDiv.style.display = 'none';
+                            scanBtn.style.display = 'block';
+                            loadingSpinner.style.display = 'none';
+                            errorDiv.style.display = 'none';
+                        });
+                    } else {
+                        scannerDiv.style.display = 'none';
+                        scanBtn.style.display = 'block';
+                        loadingSpinner.style.display = 'none';
+                        errorDiv.style.display = 'none';
+                    }
+                });
+            </script>
             {% with messages = get_flashed_messages() %}
               {% if messages %}
                 <div class="alert alert-warning mt-3">
