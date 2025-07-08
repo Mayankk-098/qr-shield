@@ -89,6 +89,19 @@
         <div class="main-card w-100" style="max-width: 520px;">
             <h1 class="mb-3 fw-bold" style="color: #2d3748; letter-spacing: 1px;">QR Code Security Scanner <span style="font-size:1.5rem;">🛡️</span></h1>
             {% if url %}
+                <div class="mb-3 text-center">
+                    <span class="fw-bold">Safety Score:</span>
+                    <span class="badge {% if safety_label == 'Safe' %}bg-success{% elif safety_label == 'Suspicious' %}bg-warning text-dark{% else %}bg-danger{% endif %}" style="font-size:1.2em;">{{ safety_score }}/10 - {{ safety_label }}</span>
+                    <div style="font-size:0.95em; color:#666;">
+                        {% if safety_label == 'Safe' %}
+                            This link appears safe based on all checks.
+                        {% elif safety_label == 'Suspicious' %}
+                            Some suspicious signs detected. Proceed with caution.
+                        {% else %}
+                            This link is likely dangerous. Opening is not recommended.
+                        {% endif %}
+                    </div>
+                </div>
                 {% if verdict == True %}
                     <div class="verdict-safe">✅ SAFE - This URL appears to be secure</div>
                 {% elif verdict == False %}

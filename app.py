@@ -50,7 +50,22 @@ def scan_qr():
                 verdict = check_url_safety(url)
                 urlscan_verdict, screenshot_url, report_url = scan_with_urlscan(url)
                 heuristic_reasons = heuristic_url_check(url)
-                return render_template('scan_result.html', url=url, verdict=verdict, urlscan_verdict=urlscan_verdict, screenshot_url=screenshot_url, report_url=report_url, heuristic_reasons=heuristic_reasons)
+                # --- Safety Score Calculation ---
+                score = 10
+                if verdict == False:
+                    score -= 6
+                if urlscan_verdict == 'suspicious':
+                    score -= 3
+                if heuristic_reasons:
+                    score -= min(len(heuristic_reasons), 3)  # up to -3 for heuristics
+                score = max(0, min(10, score))
+                if score >= 8:
+                    safety_label = 'Safe'
+                elif score >= 5:
+                    safety_label = 'Suspicious'
+                else:
+                    safety_label = 'Dangerous'
+                return render_template('scan_result.html', url=url, verdict=verdict, urlscan_verdict=urlscan_verdict, screenshot_url=screenshot_url, report_url=report_url, heuristic_reasons=heuristic_reasons, safety_score=score, safety_label=safety_label)
             else:
                 flash('No QR code detected or QR does not contain a URL.')
                 return redirect(request.url)
