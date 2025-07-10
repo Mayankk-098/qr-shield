@@ -7,3 +7,4 @@ pyotp
 gunicorn
 beautifulsoup4
 bleach
+playwright

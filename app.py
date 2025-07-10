@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, flash, session, url_for, Response
+from flask import Flask, render_template, request, redirect, flash, session, url_for, Response, send_file
 from werkzeug.utils import secure_filename
 import os
 import cv2
@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 import json
 from bs4 import BeautifulSoup
 import bleach
+from playwright.sync_api import sync_playwright
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'dev-secret-key')
@@ -35,6 +36,76 @@ SECURITY_LOGS = []
 MAX_LOG_ENTRIES = 1000
 
 print("SAFE_BROWSING_API_KEY:", SAFE_BROWSING_API_KEY)
+
+SCREENSHOT_DIR = 'static/vault_screenshots'
+if not os.path.exists(SCREENSHOT_DIR):
+    os.makedirs(SCREENSHOT_DIR)
+
+def take_screenshot(url, output_path):
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        try:
+            page.goto(url, timeout=15000)
+            page.screenshot(path=output_path, full_page=True)
+        except Exception as e:
+            browser.close()
+            raise e
+        browser.close()
+
+@app.route('/vault_screenshot/<vault_id>')
+def vault_screenshot(vault_id):
+    if vault_id not in VAULT_SESSIONS:
+        return "Invalid vault session", 404
+    session_data = VAULT_SESSIONS[vault_id]
+    if not session_data['is_active'] or datetime.now() > session_data['expires_at']:
+        return "Vault session expired", 410
+    target_url = session_data['url']
+    screenshot_path = os.path.join(SCREENSHOT_DIR, f'{vault_id}.png')
+    if not os.path.exists(screenshot_path):
+        try:
+            take_screenshot(target_url, screenshot_path)
+        except Exception as e:
+            return f"<div style='padding:2em;text-align:center;color:#c00;'>Failed to generate screenshot: {e}</div>", 502
+    return send_file(screenshot_path, mimetype='image/png')
+
+@app.route('/vault_preview/<vault_id>')
+def vault_preview(vault_id):
+    if vault_id not in VAULT_SESSIONS:
+        return "Invalid vault session", 404
+    session_data = VAULT_SESSIONS[vault_id]
+    if not session_data['is_active'] or datetime.now() > session_data['expires_at']:
+        return "Vault session expired", 410
+    screenshot_url = url_for('vault_screenshot', vault_id=vault_id)
+    target_url = session_data['url']
+    return f'''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>QR Shield Vault Screenshot Preview</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body {{ background: #f5f5f5; margin: 0; }}
+            .vault-warning {{ background: #ffc107; color: #333; padding: 1em; text-align: center; font-weight: bold; }}
+            .vault-frame {{ background: #fff; margin: 2em auto; max-width: 900px; box-shadow: 0 4px 32px rgba(0,0,0,0.08); border-radius: 1.5rem; padding: 2em; text-align: center; }}
+            .vault-controls {{ text-align: right; margin-bottom: 1em; }}
+            .vault-controls a {{ margin-left: 1em; }}
+            img.screenshot {{ max-width: 100%; border-radius: 1rem; box-shadow: 0 2px 16px rgba(0,0,0,0.08); }}
+        </style>
+    </head>
+    <body>
+        <div class="vault-warning">⚠️ You are viewing a screenshot preview in QR Shield Vault. This is a safe, read-only image of the page.</div>
+        <div class="vault-frame">
+            <div class="vault-controls">
+                <a href="{target_url}" target="_blank" rel="noopener noreferrer">Open Directly (Not Recommended)</a>
+                <a href="/scan">Scan Another</a>
+            </div>
+            <img class="screenshot" src="{screenshot_url}" alt="Vault Screenshot Preview" />
+        </div>
+    </body>
+    </html>
+    '''
 
 def cleanup_expired_sessions():
     """Clean up expired vault sessions"""
