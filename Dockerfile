@@ -8,6 +8,9 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
+# Explicitly install browsers again (guaranteed fix)
+RUN playwright install
+
 EXPOSE 5000
 
 CMD ["python", "app.py"] 
