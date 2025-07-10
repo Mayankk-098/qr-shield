@@ -16,11 +16,11 @@ COPY requirements.txt .
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
-# Install Playwright browsers
-RUN pip install playwright && playwright install --with-deps
-
 # Copy the rest of the code
 COPY . .
+
+# Install Playwright browsers (must be after code is copied)
+RUN playwright install --with-deps
 
 # Expose port
 EXPOSE 5000
