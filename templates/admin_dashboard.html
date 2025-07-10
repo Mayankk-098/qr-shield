@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Vault Admin Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .admin-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            margin: 1rem 0;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+        }
+        .log-entry {
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            border-radius: 0.25rem;
+        }
+        .log-entry.warning {
+            border-left-color: #ffc107;
+        }
+        .log-entry.danger {
+            border-left-color: #dc3545;
+        }
+        .session-item {
+            background: #f8f9fa;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            border-left: 4px solid #28a745;
+        }
+        .session-item.suspicious {
+            border-left-color: #ffc107;
+        }
+        .session-item.dangerous {
+            border-left-color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="admin-card p-4">
+                    <h1 class="mb-4">🛡️ Vault Admin Dashboard</h1>
+                    
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <div class="stat-number" id="activeSessions">-</div>
+                                <div>Active Sessions</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <div class="stat-number" id="totalSessions">-</div>
+                                <div>Total Sessions</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <div class="stat-number" id="securityLogs">-</div>
+                                <div>Security Logs</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <div class="stat-number" id="lastCleanup">-</div>
+                                <div>Last Cleanup</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="admin-card p-4">
+                    <h3>📊 Active Vault Sessions</h3>
+                    <div id="sessionsList">
+                        <div class="text-center text-muted">Loading...</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="admin-card p-4">
+                    <h3>🔍 Recent Security Logs</h3>
+                    <div id="logsList">
+                        <div class="text-center text-muted">Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="admin-card p-4">
+                    <h3>⚙️ System Controls</h3>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <button class="btn btn-primary w-100" onclick="refreshData()">
+                                🔄 Refresh Data
+                            </button>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-warning w-100" onclick="cleanupSessions()">
+                                🧹 Force Cleanup
+                            </button>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-info w-100" onclick="exportLogs()">
+                                📥 Export Logs
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function loadSessions() {
+            fetch('/admin/vault-sessions')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('activeSessions').textContent = data.active_sessions.length;
+                    document.getElementById('totalSessions').textContent = data.total_sessions;
+                    document.getElementById('securityLogs').textContent = data.security_logs_count;
+                    
+                    const sessionsList = document.getElementById('sessionsList');
+                    if (data.active_sessions.length === 0) {
+                        sessionsList.innerHTML = '<div class="text-center text-muted">No active sessions</div>';
+                        return;
+                    }
+                    
+                    sessionsList.innerHTML = data.active_sessions.map(session => `
+                        <div class="session-item ${session.safety_label.toLowerCase()}">
+                            <strong>${session.url}</strong><br>
+                            <small class="text-muted">
+                                ID: ${session.vault_id.substring(0, 8)}... | 
+                                Safety: ${session.safety_label} | 
+                                Accesses: ${session.access_count} | 
+                                Expires: ${new Date(session.expires_at).toLocaleTimeString()}
+                            </small>
+                        </div>
+                    `).join('');
+                })
+                .catch(error => {
+                    console.error('Error loading sessions:', error);
+                    document.getElementById('sessionsList').innerHTML = '<div class="text-center text-danger">Error loading sessions</div>';
+                });
+        }
+
+        function loadLogs() {
+            fetch('/admin/security-logs')
+                .then(response => response.json())
+                .then(data => {
+                    const logsList = document.getElementById('logsList');
+                    if (data.logs.length === 0) {
+                        logsList.innerHTML = '<div class="text-center text-muted">No logs available</div>';
+                        return;
+                    }
+                    
+                    logsList.innerHTML = data.logs.map(log => `
+                        <div class="log-entry ${log.event_type.includes('denied') ? 'danger' : log.event_type.includes('warning') ? 'warning' : ''}">
+                            <strong>${log.event_type}</strong><br>
+                            <small class="text-muted">
+                                ${log.description} | 
+                                ${new Date(log.timestamp).toLocaleString()}
+                            </small>
+                        </div>
+                    `).join('');
+                })
+                .catch(error => {
+                    console.error('Error loading logs:', error);
+                    document.getElementById('logsList').innerHTML = '<div class="text-center text-danger">Error loading logs</div>';
+                });
+        }
+
+        function refreshData() {
+            loadSessions();
+            loadLogs();
+            document.getElementById('lastCleanup').textContent = new Date().toLocaleTimeString();
+        }
+
+        function cleanupSessions() {
+            fetch('/admin/vault-sessions')
+                .then(response => response.json())
+                .then(data => {
+                    alert(`Cleanup completed. Active sessions: ${data.active_sessions.length}`);
+                    refreshData();
+                });
+        }
+
+        function exportLogs() {
+            fetch('/admin/security-logs')
+                .then(response => response.json())
+                .then(data => {
+                    const blob = new Blob([JSON.stringify(data.logs, null, 2)], {type: 'application/json'});
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `vault_logs_${new Date().toISOString().split('T')[0]}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                });
+        }
+
+        // Load data on page load
+        refreshData();
+        
+        // Auto-refresh every 30 seconds
+        setInterval(refreshData, 30000);
+    </script>
+</body>
+</html> 

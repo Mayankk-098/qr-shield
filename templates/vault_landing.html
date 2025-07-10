@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Secure Vault - Landing</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .vault-card {
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            border-radius: 1.5rem;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 3rem 2.5rem;
+            margin-top: 4rem;
+            animation: vaultFadeIn 1s ease-out;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        @keyframes vaultFadeIn {
+            from { 
+                opacity: 0; 
+                transform: translateY(40px) scale(0.95); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0) scale(1); 
+            }
+        }
+        .vault-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .safety-badge {
+            font-size: 1.2em;
+            padding: 0.8em 1.5em;
+            border-radius: 2rem;
+            font-weight: bold;
+            margin: 1rem 0;
+        }
+        .safety-safe { background: #d4edda; color: #155724; border: 2px solid #c3e6cb; }
+        .safety-suspicious { background: #fff3cd; color: #856404; border: 2px solid #ffeaa7; }
+        .safety-dangerous { background: #f8d7da; color: #721c24; border: 2px solid #f5c6cb; }
+        
+        .vault-features {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+        .feature-item {
+            display: flex;
+            align-items: center;
+            margin: 0.8rem 0;
+            font-size: 0.95em;
+        }
+        .feature-icon {
+            margin-right: 0.8rem;
+            font-size: 1.2em;
+        }
+        .warning-box {
+            background: #fff3cd;
+            border: 2px solid #ffeaa7;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            color: #856404;
+        }
+        .btn-vault {
+            font-size: 1.1em;
+            padding: 1rem 2rem;
+            border-radius: 2rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            margin: 0.5rem;
+        }
+        .btn-vault:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+        .btn-vault-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+        }
+        .btn-vault-secondary {
+            background: #6c757d;
+            border: none;
+            color: white;
+        }
+        .btn-vault-danger {
+            background: #dc3545;
+            border: none;
+            color: white;
+        }
+        .session-info {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 0.8rem;
+            padding: 1rem;
+            margin: 1rem 0;
+            font-size: 0.9em;
+            color: #666;
+        }
+        .footer {
+            margin-top: auto;
+            padding: 1rem 0;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container d-flex justify-content-center align-items-center flex-column" style="min-height: 80vh;">
+        <div class="vault-card w-100" style="max-width: 600px;">
+            <div class="text-center">
+                <div class="vault-icon">🛡️</div>
+                <h1 class="mb-3 fw-bold" style="color: #2d3748;">Secure Vault Access</h1>
+                <p class="text-muted mb-4">You're about to access a URL through our secure vault system</p>
+            </div>
+
+            <div class="session-info">
+                <strong>Target URL:</strong> {{ session_data.url }}<br>
+                <strong>Session ID:</strong> {{ vault_id[:8] }}...<br>
+                <strong>Created:</strong> {{ session_data.created_at.strftime('%H:%M:%S') }}<br>
+                <strong>Expires:</strong> {{ session_data.expires_at.strftime('%H:%M:%S') }}
+            </div>
+
+            <div class="safety-badge safety-{{ session_data.safety_label.lower() }}">
+                {% if session_data.safety_label == 'Safe' %}
+                    ✅ Safe ({{ session_data.safety_score }}/10)
+                {% elif session_data.safety_label == 'Suspicious' %}
+                    ⚠️ Suspicious ({{ session_data.safety_score }}/10)
+                {% else %}
+                    ❌ Dangerous ({{ session_data.safety_score }}/10)
+                {% endif %}
+            </div>
+
+            {% if session_data.safety_label != 'Safe' %}
+            <div class="warning-box">
+                <h5>⚠️ Security Warning</h5>
+                <p>This URL has been flagged as potentially unsafe. The vault will provide additional protection, but proceed with caution.</p>
+            </div>
+            {% endif %}
+
+            <div class="vault-features">
+                <h5>🛡️ Vault Protection Features:</h5>
+                <div class="feature-item">
+                    <span class="feature-icon">🔒</span>
+                    <span>Sandboxed browsing environment</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">🛡️</span>
+                    <span>Malicious content filtering</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">⏱️</span>
+                    <span>Session timeout (1 hour)</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">📊</span>
+                    <span>Access monitoring and logging</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">🚫</span>
+                    <span>Limited access attempts (5 max)</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">🔍</span>
+                    <span>Real-time security scanning</span>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <a href="{{ url_for('advanced_vault_proxy', vault_id=vault_id) }}" 
+                   class="btn btn-vault btn-vault-primary">
+                    🚀 Enter Secure Proxy Vault
+                </a>
+                <br>
+                <a href="{{ session_data.url }}" 
+                   target="_blank" 
+                   rel="noopener noreferrer" 
+                   class="btn btn-vault btn-vault-secondary">
+                    🔗 Open Directly (Not Recommended)
+                </a>
+                <br>
+                <a href="/scan" class="btn btn-vault btn-vault-danger">
+                    ❌ Cancel & Go Back
+                </a>
+            </div>
+
+            <div class="mt-4 text-center">
+                <small class="text-muted">
+                    <strong>Current Access Count:</strong> {{ session_data.access_count }}/{{ session_data.max_accesses }}<br>
+                    <strong>Time Remaining:</strong> <span id="timeRemaining"></span>
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        &copy; 2024 QR Security Scanner - Secure Vault System
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Countdown timer
+        function updateTimeRemaining() {
+            const expiresAt = new Date('{{ session_data.expires_at.isoformat() }}');
+            const now = new Date();
+            const diff = expiresAt - now;
+            
+            if (diff <= 0) {
+                document.getElementById('timeRemaining').textContent = 'EXPIRED';
+                location.reload();
+                return;
+            }
+            
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            
+            document.getElementById('timeRemaining').textContent = 
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        updateTimeRemaining();
+        setInterval(updateTimeRemaining, 1000);
+        
+        // Auto-refresh session status
+        setInterval(() => {
+            fetch('/vault/{{ vault_id }}/status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'expired') {
+                        alert('Vault session has expired. Redirecting...');
+                        window.location.href = '/scan';
+                    }
+                })
+                .catch(() => {
+                    // Session might be invalid
+                });
+        }, 30000); // Check every 30 seconds
+    </script>
+</body>
+</html> 

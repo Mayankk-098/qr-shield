@@ -106,12 +106,15 @@
                             This link is likely dangerous. Opening is not recommended.
                         {% endif %}
                     </div>
-                    {% if verdict == True %}
-                        <a href="{{ url }}" target="_blank" rel="noopener noreferrer" class="btn btn-success w-100 mb-3" style="font-size:1.1em;">Continue to the link</a>
-                    {% elif verdict == False %}
-                        <a href="{{ url }}" target="_blank" rel="noopener noreferrer" class="btn btn-danger w-100 mb-3" style="font-size:1.1em;">Open anyway (not recommended)</a>
+                    {% if safety_label == 'Safe' %}
+                        <a href="{{ url_for('advanced_vault_proxy', vault_id=vault_id) }}" class="btn btn-success w-100 mb-3" style="font-size:1.1em;">🛡️ Proceed in Secure Proxy Vault</a>
+                        <a href="{{ url }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-success w-100 mb-2" style="font-size:0.9em;">Open Directly</a>
+                    {% elif safety_label == 'Suspicious' %}
+                        <a href="{{ url_for('advanced_vault_proxy', vault_id=vault_id) }}" class="btn btn-warning w-100 mb-3" style="font-size:1.1em;">🛡️ Proceed in Secure Proxy Vault (Recommended)</a>
+                        <a href="{{ url }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-warning w-100 mb-2" style="font-size:0.9em;">Open Directly (Not Recommended)</a>
                     {% else %}
-                        <a href="{{ url }}" target="_blank" rel="noopener noreferrer" class="btn btn-warning w-100 mb-3" style="font-size:1.1em;">Proceed with caution</a>
+                        <a href="{{ url_for('advanced_vault_proxy', vault_id=vault_id) }}" class="btn btn-danger w-100 mb-3" style="font-size:1.1em;">🛡️ Proceed in Secure Proxy Vault (Strongly Recommended)</a>
+                        <a href="{{ url }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-danger w-100 mb-2" style="font-size:0.9em;">Open Directly (Dangerous)</a>
                     {% endif %}
                     <button class="btn btn-link text-decoration-none" type="button" data-bs-toggle="collapse" data-bs-target="#detailsCollapse" aria-expanded="false" aria-controls="detailsCollapse" style="font-size:1em;">Show Details</button>
                     <div class="collapse mt-3 text-start" id="detailsCollapse">
