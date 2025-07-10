@@ -5,3 +5,5 @@ requests
 cryptography
 pyotp
 gunicorn
+beautifulsoup4
+bleach
