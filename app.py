@@ -42,23 +42,27 @@ if not os.path.exists(SCREENSHOT_DIR):
     os.makedirs(SCREENSHOT_DIR)
 
 def take_screenshot(url, output_path):
+    print(f"[DEBUG] Attempting screenshot: {url} -> {output_path}")
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
         try:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page()
             page.goto(url, timeout=15000)
             page.screenshot(path=output_path, full_page=True)
-        except Exception as e:
+            print(f"[DEBUG] Screenshot success: {output_path}")
             browser.close()
+        except Exception as e:
+            print(f"[ERROR] Screenshot failed: {e}")
             raise e
-        browser.close()
 
 @app.route('/vault_screenshot/<vault_id>')
 def vault_screenshot(vault_id):
     if vault_id not in VAULT_SESSIONS:
+        print("[ERROR] Invalid vault session")
         return "Invalid vault session", 404
     session_data = VAULT_SESSIONS[vault_id]
     if not session_data['is_active'] or datetime.now() > session_data['expires_at']:
+        print("[ERROR] Vault session expired")
         return "Vault session expired", 410
     target_url = session_data['url']
     screenshot_path = os.path.join(SCREENSHOT_DIR, f'{vault_id}.png')
@@ -66,8 +70,17 @@ def vault_screenshot(vault_id):
         try:
             take_screenshot(target_url, screenshot_path)
         except Exception as e:
+            print(f"[ERROR] Failed to generate screenshot: {e}")
             return f"<div style='padding:2em;text-align:center;color:#c00;'>Failed to generate screenshot: {e}</div>", 502
     return send_file(screenshot_path, mimetype='image/png')
+
+@app.route('/test_playwright')
+def test_playwright():
+    try:
+        take_screenshot('https://example.com', 'static/vault_screenshots/test.png')
+        return send_file('static/vault_screenshots/test.png', mimetype='image/png')
+    except Exception as e:
+        return f"Playwright test failed: {e}"
 
 @app.route('/vault_preview/<vault_id>')
 def vault_preview(vault_id):
