@@ -476,7 +476,8 @@ def advanced_vault_proxy(vault_id):
             if tag.has_attr(attr):
                 tag[attr] = urljoin(target_url, tag[attr])
         # Bleach sanitize (allow only safe tags/attributes)
-        safe_html = bleach.clean(str(soup), tags=bleach.sanitizer.ALLOWED_TAGS + ['html', 'head', 'body', 'meta', 'title', 'style'], attributes=bleach.sanitizer.ALLOWED_ATTRIBUTES, strip=True)
+        safe_tags = list(bleach.sanitizer.ALLOWED_TAGS) + ['html', 'head', 'body', 'meta', 'title', 'style']
+        safe_html = bleach.clean(str(soup), tags=safe_tags, attributes=bleach.sanitizer.ALLOWED_ATTRIBUTES, strip=True)
         # Wrap in a vault UI
         vault_html = f'''
         <!DOCTYPE html>
