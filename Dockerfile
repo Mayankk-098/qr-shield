@@ -1,3 +1,4 @@
+
 FROM mcr.microsoft.com/playwright/python:v1.44.0-jammy
 
 WORKDIR /app
@@ -9,7 +10,7 @@ RUN pip install -r requirements.txt
 COPY . .
 
 # Explicitly install browsers again (guaranteed fix)
-RUN playwright install
+RUN python -m playwright install
 
 EXPOSE 5000
 
