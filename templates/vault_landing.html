@@ -8,20 +8,21 @@
     <style>
         body {
             min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #2d006e 0%, #8f00ff 100%);
             display: flex;
             flex-direction: column;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #fff;
         }
         .vault-card {
-            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            box-shadow: 0 0 32px 8px #a259ff, 0 8px 32px rgba(0,0,0,0.18);
             border-radius: 1.5rem;
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(30, 0, 60, 0.95);
             backdrop-filter: blur(10px);
             padding: 3rem 2.5rem;
             margin-top: 4rem;
             animation: vaultFadeIn 1s ease-out;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 2px solid #a259ff;
         }
         @keyframes vaultFadeIn {
             from { 
@@ -37,6 +38,8 @@
             font-size: 4rem;
             margin-bottom: 1rem;
             animation: pulse 2s infinite;
+            color: #a259ff;
+            text-shadow: 0 0 16px #a259ff;
         }
         @keyframes pulse {
             0%, 100% { transform: scale(1); }
@@ -48,16 +51,22 @@
             border-radius: 2rem;
             font-weight: bold;
             margin: 1rem 0;
+            background: linear-gradient(90deg, #a259ff 0%, #8f00ff 100%);
+            color: #fff;
+            border: 2px solid #a259ff;
+            text-shadow: 0 0 8px #fff;
         }
-        .safety-safe { background: #d4edda; color: #155724; border: 2px solid #c3e6cb; }
-        .safety-suspicious { background: #fff3cd; color: #856404; border: 2px solid #ffeaa7; }
-        .safety-dangerous { background: #f8d7da; color: #721c24; border: 2px solid #f5c6cb; }
+        .safety-safe { background: rgba(0,255,234,0.12); color: #00ffea; border: 2px solid #00ffea; text-shadow: 0 0 8px #00ffea; }
+        .safety-suspicious { background: rgba(255,145,0,0.12); color: #ff9100; border: 2px solid #ff9100; text-shadow: 0 0 8px #ff9100; }
+        .safety-dangerous { background: rgba(255,0,200,0.12); color: #ff00c8; border: 2px solid #ff00c8; text-shadow: 0 0 8px #ff00c8; }
         
         .vault-features {
-            background: rgba(255, 255, 255, 0.8);
+            background: rgba(162,89,255,0.12);
             border-radius: 1rem;
             padding: 1.5rem;
             margin: 1.5rem 0;
+            color: #fff;
+            border: 1px solid #a259ff;
         }
         .feature-item {
             display: flex;
@@ -68,14 +77,17 @@
         .feature-icon {
             margin-right: 0.8rem;
             font-size: 1.2em;
+            color: #a259ff;
+            text-shadow: 0 0 8px #a259ff;
         }
         .warning-box {
-            background: #fff3cd;
-            border: 2px solid #ffeaa7;
+            background: rgba(255,0,200,0.12);
+            border: 2px solid #ff00c8;
             border-radius: 1rem;
             padding: 1.5rem;
             margin: 1.5rem 0;
-            color: #856404;
+            color: #ff00c8;
+            text-shadow: 0 0 8px #ff00c8;
         }
         .btn-vault {
             font-size: 1.1em;
@@ -86,40 +98,45 @@
             letter-spacing: 1px;
             transition: all 0.3s ease;
             margin: 0.5rem;
+            background: linear-gradient(90deg, #a259ff 0%, #8f00ff 100%);
+            color: #fff;
+            border: none;
+            box-shadow: 0 0 8px #a259ff;
         }
         .btn-vault:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            box-shadow: 0 0 16px #fff, 0 0 32px #a259ff;
+            background: linear-gradient(90deg, #8f00ff 0%, #a259ff 100%);
+            color: #fff;
         }
         .btn-vault-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            color: white;
+            background: linear-gradient(90deg, #a259ff 0%, #8f00ff 100%);
+            color: #fff;
         }
         .btn-vault-secondary {
             background: #6c757d;
-            border: none;
-            color: white;
+            color: #fff;
         }
         .btn-vault-danger {
             background: #dc3545;
-            border: none;
-            color: white;
+            color: #fff;
         }
         .session-info {
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(162,89,255,0.12);
             border-radius: 0.8rem;
             padding: 1rem;
             margin: 1rem 0;
             font-size: 0.9em;
-            color: #666;
+            color: #fff;
+            border: 1px solid #a259ff;
         }
         .footer {
             margin-top: auto;
             padding: 1rem 0;
             text-align: center;
-            color: rgba(255, 255, 255, 0.8);
+            color: #a259ff;
             font-size: 0.9rem;
+            text-shadow: 0 0 8px #a259ff;
         }
     </style>
 </head>

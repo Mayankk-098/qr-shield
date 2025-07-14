@@ -8,17 +8,19 @@
     <style>
         body {
             min-height: 100vh;
-            background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+            background: linear-gradient(135deg, #2d006e 0%, #8f00ff 100%);
             display: flex;
             flex-direction: column;
+            color: #fff;
         }
         .main-card {
-            box-shadow: 0 4px 32px rgba(0,0,0,0.08);
+            box-shadow: 0 0 32px 8px #a259ff, 0 4px 32px rgba(0,0,0,0.18);
             border-radius: 1.5rem;
-            background: #fff;
+            background: rgba(30, 0, 60, 0.95);
             padding: 2.5rem 2rem 2rem 2rem;
             margin-top: 4rem;
             animation: fadeIn 1s;
+            border: 2px solid #a259ff;
         }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(30px); }
@@ -28,29 +30,31 @@
             margin-top: auto;
             padding: 1rem 0 0.5rem 0;
             text-align: center;
-            color: #888;
+            color: #a259ff;
             font-size: 0.95rem;
+            text-shadow: 0 0 8px #a259ff;
         }
-        .safe { color: #198754; font-weight: bold; }
-        .danger { color: #dc3545; font-weight: bold; }
-        .unknown { color: #6c757d; font-weight: bold; }
-        .suspicious { color: #fd7e14; font-weight: bold; }
-        .section-title { font-size: 1.15rem; margin-top: 1.5rem; margin-bottom: 0.5rem; color: #2d3748; }
+        .safe { color: #00ffea; font-weight: bold; text-shadow: 0 0 8px #00ffea; }
+        .danger { color: #ff00c8; font-weight: bold; text-shadow: 0 0 8px #ff00c8; }
+        .unknown { color: #fff200; font-weight: bold; text-shadow: 0 0 8px #fff200; }
+        .suspicious { color: #ff9100; font-weight: bold; text-shadow: 0 0 8px #ff9100; }
+        .section-title { font-size: 1.15rem; margin-top: 1.5rem; margin-bottom: 0.5rem; color: #fff; text-shadow: 0 0 8px #a259ff; }
         .verdict-safe {
-            background: #e3f2fd;
-            color: #1565c0;
-            border: 2px solid #90caf9;
+            background: rgba(0,255,234,0.12);
+            color: #00ffea;
+            border: 2px solid #00ffea;
             font-size: 2em;
             font-weight: bold;
             text-align: center;
             margin-bottom: 30px;
             padding: 25px 10px;
             border-radius: 10px;
+            text-shadow: 0 0 8px #00ffea;
         }
         .verdict-dangerous {
-            background: #ffebee;
-            color: #c62828;
-            border: 2px solid #ef9a9a;
+            background: rgba(255,0,200,0.12);
+            color: #ff00c8;
+            border: 2px solid #ff00c8;
             font-size: 2.2em;
             font-weight: bold;
             text-align: center;
@@ -58,29 +62,73 @@
             padding: 30px 10px;
             border-radius: 10px;
             letter-spacing: 1px;
-            text-shadow: 0 2px 8px #ffcdd2;
+            text-shadow: 0 2px 8px #ff00c8;
         }
         .verdict-unknown {
-            background: #fffde7;
-            color: #f9a825;
-            border: 2px solid #ffe082;
+            background: rgba(255,242,0,0.12);
+            color: #fff200;
+            border: 2px solid #fff200;
             font-size: 1.5em;
             font-weight: bold;
             text-align: center;
             margin-bottom: 30px;
             padding: 20px 10px;
             border-radius: 10px;
+            text-shadow: 0 0 8px #fff200;
         }
         .verdict-suspicious {
-            background: #fff3e0;
-            color: #ef6c00;
-            border: 2px solid #ffb74d;
+            background: rgba(255,145,0,0.12);
+            color: #ff9100;
+            border: 2px solid #ff9100;
             font-size: 1.3em;
             font-weight: bold;
             text-align: center;
             margin-bottom: 20px;
             padding: 15px 10px;
             border-radius: 10px;
+            text-shadow: 0 0 8px #ff9100;
+        }
+        .btn-primary, .btn-success, .btn-outline-danger, .btn-secondary {
+            background: linear-gradient(90deg, #a259ff 0%, #8f00ff 100%);
+            border: none;
+            color: #fff;
+            box-shadow: 0 0 8px #a259ff;
+            transition: box-shadow 0.2s, background 0.2s;
+        }
+        .btn-primary:hover, .btn-success:hover, .btn-outline-danger:hover, .btn-secondary:hover {
+            box-shadow: 0 0 16px #fff, 0 0 32px #a259ff;
+            background: linear-gradient(90deg, #8f00ff 0%, #a259ff 100%);
+            color: #fff;
+        }
+        .btn-link {
+            color: #a259ff;
+            text-shadow: 0 0 8px #a259ff;
+        }
+        .main-card h1 {
+            color: #fff;
+            text-shadow: 0 0 8px #a259ff, 0 0 2px #fff;
+        }
+        .badge {
+            background: linear-gradient(90deg, #a259ff 0%, #8f00ff 100%);
+            color: #fff;
+            text-shadow: 0 0 8px #fff;
+        }
+        .card.card-body.bg-light.border-0 {
+            background: rgba(162,89,255,0.12) !important;
+            color: #fff;
+            border: 1px solid #a259ff;
+        }
+        .alert-danger {
+            background: rgba(255,0,200,0.12);
+            color: #ff00c8;
+            border: 2px solid #ff00c8;
+        }
+        .text-muted, .text-danger, .text-break, .text-center, .fw-bold {
+            color: #fff !important;
+            text-shadow: 0 0 8px #a259ff;
+        }
+        .text-break span {
+            color: #fff;
         }
     </style>
 </head>
@@ -93,18 +141,9 @@
                     <div style="font-size:2.5rem;">
                         {% if safety_label == 'Safe' %}✅{% elif safety_label == 'Suspicious' %}⚠️{% else %}❌{% endif %}
                     </div>
-                    <div class="fw-bold" style="font-size:1.5rem; margin-bottom:0.5rem;">
-                        {% if safety_label == 'Safe' %}This link looks safe!{% elif safety_label == 'Suspicious' %}This link looks suspicious.{% else %}This link looks dangerous!{% endif %}
-                    </div>
                     <span class="badge {% if safety_label == 'Safe' %}bg-success{% elif safety_label == 'Suspicious' %}bg-warning text-dark{% else %}bg-danger{% endif %}" style="font-size:1.2em; padding:0.7em 1.2em; border-radius:1.5em;">Safety Score: {{ safety_score }}/10</span>
                     <div style="font-size:1em; color:#666; margin-top:0.5em; margin-bottom:1.5em;">
-                        {% if safety_label == 'Safe' %}
-                            You can safely continue to this link.
-                        {% elif safety_label == 'Suspicious' %}
-                            Some signs of risk detected. Proceed with caution.
-                        {% else %}
-                            This link is likely dangerous. Opening is not recommended.
-                        {% endif %}
+                        <!-- No direct safety statement shown -->
                     </div>
                     <div class="mb-2">
                         <a href="{{ url_for('vault_preview', vault_id=vault_id) }}" class="btn btn-primary w-100 mb-2" style="font-size:1.1em;">🖼️ Safest: Screenshot Preview (No Risk)</a>
