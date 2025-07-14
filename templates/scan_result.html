@@ -112,6 +112,10 @@
                         <a href="{{ url_for('advanced_vault_proxy', vault_id=vault_id) }}" class="btn btn-success w-100 mb-2" style="font-size:1.1em;">🛡️ Safe: Secure Proxy Vault</a>
                         <small class="text-muted d-block mb-2">View a static, sanitized version of the page. No scripts or forms will run.</small>
                         <a href="{{ url }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-danger w-100 mb-2" style="font-size:0.9em;">Open Directly (Not Recommended)</a>
+                        <div class="text-break text-center mb-2" style="font-size:0.98em; color:#444; word-break:break-all;">
+                            <strong>Decoded URL:</strong><br>
+                            <span style="font-family:monospace;">{{ url }}</span>
+                        </div>
                         <small class="text-danger d-block">Opens the link in your browser. Only use if you trust the site.</small>
                     </div>
                     <button class="btn btn-link text-decoration-none" type="button" data-bs-toggle="collapse" data-bs-target="#detailsCollapse" aria-expanded="false" aria-controls="detailsCollapse" style="font-size:1em;">Show Details</button>
