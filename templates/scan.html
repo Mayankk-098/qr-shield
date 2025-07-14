@@ -8,19 +8,17 @@
     <style>
         body {
             min-height: 100vh;
-            background: linear-gradient(135deg, #2d006e 0%, #8f00ff 100%);
+            background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
             display: flex;
             flex-direction: column;
-            color: #fff;
         }
         .main-card {
-            box-shadow: 0 0 32px 8px #a259ff, 0 4px 32px rgba(0,0,0,0.18);
+            box-shadow: 0 4px 32px rgba(0,0,0,0.08);
             border-radius: 1.5rem;
-            background: rgba(30, 0, 60, 0.95);
+            background: #fff;
             padding: 2.5rem 2rem 2rem 2rem;
             margin-top: 4rem;
             animation: fadeIn 1s;
-            border: 2px solid #a259ff;
         }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(30px); }
@@ -30,45 +28,8 @@
             margin-top: auto;
             padding: 1rem 0 0.5rem 0;
             text-align: center;
-            color: #a259ff;
+            color: #888;
             font-size: 0.95rem;
-            text-shadow: 0 0 8px #a259ff;
-        }
-        .btn-primary, .btn-outline-success, .btn-outline-danger, .btn-secondary {
-            background: linear-gradient(90deg, #a259ff 0%, #8f00ff 100%);
-            border: none;
-            color: #fff;
-            box-shadow: 0 0 8px #a259ff;
-            transition: box-shadow 0.2s, background 0.2s;
-        }
-        .btn-primary:hover, .btn-outline-success:hover, .btn-outline-danger:hover, .btn-secondary:hover {
-            box-shadow: 0 0 16px #fff, 0 0 32px #a259ff;
-            background: linear-gradient(90deg, #8f00ff 0%, #a259ff 100%);
-            color: #fff;
-        }
-        .main-card h1 {
-            color: #fff;
-            text-shadow: 0 0 8px #a259ff, 0 0 2px #fff;
-        }
-        .alert-warning, .alert-danger {
-            background: rgba(255,0,200,0.12);
-            color: #ff00c8;
-            border: 2px solid #ff00c8;
-        }
-        .text-muted, .text-danger, .text-break, .text-center, .fw-bold {
-            color: #fff !important;
-            text-shadow: 0 0 8px #a259ff;
-        }
-        .form-control, .form-control-lg {
-            background: rgba(162,89,255,0.12);
-            color: #fff;
-            border: 1px solid #a259ff;
-        }
-        .form-control:focus, .form-control-lg:focus {
-            border-color: #8f00ff;
-            box-shadow: 0 0 8px #a259ff;
-            background: rgba(162,89,255,0.18);
-            color: #fff;
         }
     </style>
 </head>

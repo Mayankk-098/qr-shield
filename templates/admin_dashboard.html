@@ -7,77 +7,54 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css">
     <style>
         body {
-            background: linear-gradient(135deg, #2d006e 0%, #8f00ff 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: #fff;
         }
         .admin-card {
-            background: rgba(30, 0, 60, 0.95);
+            background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             border-radius: 1rem;
-            box-shadow: 0 0 32px 8px #a259ff, 0 8px 32px rgba(0,0,0,0.18);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
             margin: 1rem 0;
-            border: 2px solid #a259ff;
         }
         .stat-card {
-            background: linear-gradient(90deg, #a259ff 0%, #8f00ff 100%);
-            color: #fff;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
             border-radius: 1rem;
             padding: 1.5rem;
             margin: 1rem 0;
             text-align: center;
-            box-shadow: 0 0 16px #a259ff;
-            border: 2px solid #a259ff;
         }
         .stat-number {
             font-size: 2.5rem;
             font-weight: bold;
-            text-shadow: 0 0 8px #fff;
         }
         .log-entry {
-            background: rgba(162,89,255,0.12);
-            border-left: 4px solid #a259ff;
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
             padding: 0.5rem;
             margin: 0.5rem 0;
             border-radius: 0.25rem;
-            color: #fff;
         }
         .log-entry.warning {
-            border-left-color: #ff9100;
+            border-left-color: #ffc107;
         }
         .log-entry.danger {
-            border-left-color: #ff00c8;
+            border-left-color: #dc3545;
         }
         .session-item {
-            background: rgba(162,89,255,0.12);
+            background: #f8f9fa;
             border-radius: 0.5rem;
             padding: 1rem;
             margin: 0.5rem 0;
-            border-left: 4px solid #00ffea;
-            color: #fff;
+            border-left: 4px solid #28a745;
         }
         .session-item.suspicious {
-            border-left-color: #ff9100;
+            border-left-color: #ffc107;
         }
         .session-item.dangerous {
-            border-left-color: #ff00c8;
-        }
-        .btn-primary, .btn-warning, .btn-info {
-            background: linear-gradient(90deg, #a259ff 0%, #8f00ff 100%);
-            border: none;
-            color: #fff;
-            box-shadow: 0 0 8px #a259ff;
-            transition: box-shadow 0.2s, background 0.2s;
-        }
-        .btn-primary:hover, .btn-warning:hover, .btn-info:hover {
-            box-shadow: 0 0 16px #fff, 0 0 32px #a259ff;
-            background: linear-gradient(90deg, #8f00ff 0%, #a259ff 100%);
-            color: #fff;
-        }
-        h1, h3, .stat-number {
-            color: #fff;
-            text-shadow: 0 0 8px #a259ff, 0 0 2px #fff;
+            border-left-color: #dc3545;
         }
     </style>
 </head>
