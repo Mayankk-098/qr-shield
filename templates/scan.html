@@ -31,6 +31,31 @@
             color: #888;
             font-size: 0.95rem;
         }
+        .dark-mode {
+            background: #181a1b !important;
+            color: #e0e0e0 !important;
+        }
+        .dark-mode .main-card {
+            background: #23272b !important;
+            color: #e0e0e0 !important;
+            box-shadow: 0 4px 32px rgba(0,0,0,0.4);
+        }
+        .dark-mode .btn, .dark-mode .form-control {
+            background: #23272b !important;
+            color: #e0e0e0 !important;
+            border-color: #444 !important;
+        }
+        .dark-mode .btn-primary {
+            background: #3a3f44 !important;
+            border-color: #444 !important;
+        }
+        .dark-mode .btn-secondary {
+            background: #444 !important;
+            border-color: #666 !important;
+        }
+        .dark-mode .footer {
+            color: #aaa !important;
+        }
     </style>
 </head>
 <body>
@@ -38,6 +63,10 @@
         <div class="main-card w-100" style="max-width: 420px;">
             <h1 class="mb-3 fw-bold" style="color: #2d3748; letter-spacing: 1px;">QR Code Security Scanner <span style="font-size:1.5rem;">🛡️</span></h1>
             <p class="mb-4 text-muted">Upload a QR code image to check if the embedded link is safe or suspicious using multiple security checks.</p>
+            <div class="d-flex justify-content-end align-items-center mb-2">
+                <label class="form-check-label me-2" for="darkModeSwitch">🌙 Dark Mode</label>
+                <input class="form-check-input" type="checkbox" id="darkModeSwitch" onclick="setDarkMode(this.checked)">
+            </div>
             <form method="POST" enctype="multipart/form-data" class="mb-4">
                 <div class="mb-3">
                     <input type="file" name="qr_image" accept="image/*" class="form-control form-control-lg" required>
@@ -49,6 +78,7 @@
             </div>
             <div class="d-grid gap-2 mb-3">
                 <button id="camera-scan-btn" class="btn btn-outline-success btn-lg" type="button">Scan with Camera</button>
+                <button id="open-camera-feed-btn" class="btn btn-outline-primary btn-lg" type="button" style="display:none;">View Camera Feed in New Window</button>
             </div>
             <div id="camera-scanner" style="display:none; margin-bottom:1.5rem;">
                 <div class="text-center mb-2">
@@ -79,8 +109,11 @@
                 const captureBtn = document.getElementById('capture-scan-btn');
                 const loadingSpinner = document.getElementById('camera-loading');
                 const errorDiv = document.getElementById('camera-error');
+                const openFeedBtn = document.getElementById('open-camera-feed-btn');
                 let html5Qr;
                 let isCameraRunning = false;
+                let cameraStream = null;
+
                 scanBtn.addEventListener('click', function() {
                     scanBtn.style.display = 'none';
                     scannerDiv.style.display = 'block';
@@ -104,6 +137,16 @@
                         ).then(() => {
                             loadingSpinner.style.display = 'none';
                             isCameraRunning = true;
+                            // Request camera stream for separate window
+                            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                                .then(stream => {
+                                    cameraStream = stream;
+                                    openFeedBtn.style.display = 'block';
+                                })
+                                .catch(() => {
+                                    cameraStream = null;
+                                    openFeedBtn.style.display = 'none';
+                                });
                         }).catch(err => {
                             errorDiv.textContent = 'Camera error: ' + err;
                             errorDiv.style.display = 'block';
@@ -113,6 +156,24 @@
                         });
                     }, 300);
                 });
+
+                openFeedBtn.addEventListener('click', function() {
+                    if (!cameraStream) return;
+                    const win = window.open('', '_blank', 'width=480,height=400');
+                    if (!win) return;
+                    win.document.write('<html><head><title>Camera Feed</title></head><body style="margin:0;background:#111;color:#fff;"><video id="camvid" autoplay playsinline style="width:100%;height:auto;max-height:100vh;background:#000;"></video></body></html>');
+                    win.document.close();
+                    const video = win.document.getElementById('camvid');
+                    if (video) {
+                        video.srcObject = cameraStream;
+                    }
+                    win.onbeforeunload = function() {
+                        if (video && video.srcObject) {
+                            video.srcObject.getTracks().forEach(track => track.stop());
+                        }
+                    };
+                });
+
                 captureBtn.addEventListener('click', function() {
                     if (!html5Qr || !isCameraRunning) return;
                     html5Qr.getRunningTrackSettings().then(settings => {
@@ -155,12 +216,22 @@
                             loadingSpinner.style.display = 'none';
                             errorDiv.style.display = 'none';
                             isCameraRunning = false;
+                            openFeedBtn.style.display = 'none';
+                            if (cameraStream) {
+                                cameraStream.getTracks().forEach(track => track.stop());
+                                cameraStream = null;
+                            }
                         }).catch(() => {
                             scannerDiv.style.display = 'none';
                             scanBtn.style.display = 'block';
                             loadingSpinner.style.display = 'none';
                             errorDiv.style.display = 'none';
                             isCameraRunning = false;
+                            openFeedBtn.style.display = 'none';
+                            if (cameraStream) {
+                                cameraStream.getTracks().forEach(track => track.stop());
+                                cameraStream = null;
+                            }
                         });
                     } else {
                         scannerDiv.style.display = 'none';
@@ -168,6 +239,11 @@
                         loadingSpinner.style.display = 'none';
                         errorDiv.style.display = 'none';
                         isCameraRunning = false;
+                        openFeedBtn.style.display = 'none';
+                        if (cameraStream) {
+                            cameraStream.getTracks().forEach(track => track.stop());
+                            cameraStream = null;
+                        }
                     }
                 });
             </script>
