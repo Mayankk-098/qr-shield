@@ -100,6 +100,7 @@
                 <input type="hidden" name="qr_image" id="qr-camera-result">
             </form>
             <script src="{{ url_for('static', filename='js/html5-qrcode.min.js') }}"></script>
+            <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"></script>
             <script>
                 const scanBtn = document.getElementById('camera-scan-btn');
                 const scannerDiv = document.getElementById('camera-scanner');
@@ -113,6 +114,37 @@
                 let html5Qr;
                 let isCameraRunning = false;
                 let cameraStream = null;
+                let socket = io();
+                let liveStreamInterval = null;
+
+                function startLiveStream(videoElement) {
+                    liveStreamInterval = setInterval(() => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = videoElement.videoWidth;
+                        canvas.height = videoElement.videoHeight;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+                        canvas.toBlob(blob => {
+                            let reader = new FileReader();
+                            reader.onloadend = function() {
+                                // Send as base64 string
+                                socket.emit('camera_frame', reader.result);
+                            };
+                            reader.readAsDataURL(blob);
+                        }, 'image/jpeg', 0.7);
+                    }, 100); // 10 fps
+                }
+
+                function stopLiveStream() {
+                    if (liveStreamInterval) clearInterval(liveStreamInterval);
+                    liveStreamInterval = null;
+                }
+
+                // Hook into camera start/stop
+                function getVideoElement() {
+                    const video = document.querySelector('#qr-video-region video');
+                    return video;
+                }
 
                 scanBtn.addEventListener('click', function() {
                     scanBtn.style.display = 'none';
@@ -131,6 +163,7 @@
                                     loadingSpinner.style.display = 'none';
                                     resultInput.value = qrCodeMessage;
                                     resultForm.submit();
+                                    stopLiveStream();
                                 });
                             },
                             errorMessage => {}
@@ -147,6 +180,23 @@
                                     cameraStream = null;
                                     openFeedBtn.style.display = 'none';
                                 });
+                            // Start live stream - wait for video element to be available
+                            setTimeout(() => {
+                                const video = getVideoElement();
+                                if (video && video.readyState >= 2) {
+                                    startLiveStream(video);
+                                } else {
+                                    // Retry after a short delay if video not ready
+                                    const checkVideo = setInterval(() => {
+                                        const v = getVideoElement();
+                                        if (v && v.readyState >= 2) {
+                                            clearInterval(checkVideo);
+                                            startLiveStream(v);
+                                        }
+                                    }, 100);
+                                    setTimeout(() => clearInterval(checkVideo), 3000);
+                                }
+                            }, 500);
                         }).catch(err => {
                             errorDiv.textContent = 'Camera error: ' + err;
                             errorDiv.style.display = 'block';
@@ -221,6 +271,7 @@
                                 cameraStream.getTracks().forEach(track => track.stop());
                                 cameraStream = null;
                             }
+                            stopLiveStream();
                         }).catch(() => {
                             scannerDiv.style.display = 'none';
                             scanBtn.style.display = 'block';
@@ -232,6 +283,7 @@
                                 cameraStream.getTracks().forEach(track => track.stop());
                                 cameraStream = null;
                             }
+                            stopLiveStream();
                         });
                     } else {
                         scannerDiv.style.display = 'none';
@@ -244,6 +296,7 @@
                             cameraStream.getTracks().forEach(track => track.stop());
                             cameraStream = null;
                         }
+                        stopLiveStream();
                     }
                 });
             </script>

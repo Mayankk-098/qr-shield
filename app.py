@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, flash, session, url_for, Response, send_file
 from werkzeug.utils import secure_filename
+from functools import wraps
 import os
 import cv2
 from PIL import Image
@@ -16,12 +17,17 @@ import json
 from bs4 import BeautifulSoup
 import bleach
 from playwright.sync_api import sync_playwright
+from flask_socketio import SocketIO, emit
+import base64
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'dev-secret-key')
 
-SAFE_BROWSING_API_KEY = os.environ.get('SAFE_BROWSING_API_KEY')
-SAFE_BROWSING_API_URL = 'https://safebrowsing.googleapis.com/v4/threatMatches:find?key=' + SAFE_BROWSING_API_KEY
+# Admin authentication
+ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'admin123')  # Change this in production!
+
+SAFE_BROWSING_API_KEY = os.environ.get('SAFE_BROWSING_API_KEY', '')
+SAFE_BROWSING_API_URL = 'https://safebrowsing.googleapis.com/v4/threatMatches:find?key=' + SAFE_BROWSING_API_KEY if SAFE_BROWSING_API_KEY else None
 
 URLSCAN_API_KEY = os.environ.get('URLSCAN_API_KEY')
 URLSCAN_API_URL = 'https://urlscan.io/api/v1/scan/'
@@ -40,6 +46,9 @@ print("SAFE_BROWSING_API_KEY:", SAFE_BROWSING_API_KEY)
 SCREENSHOT_DIR = 'static/vault_screenshots'
 if not os.path.exists(SCREENSHOT_DIR):
     os.makedirs(SCREENSHOT_DIR)
+
+socketio = SocketIO(app, cors_allowed_origins="*")
+latest_frame = None
 
 def take_screenshot(url, output_path):
     print(f"[DEBUG] Attempting screenshot: {url} -> {output_path}")
@@ -136,6 +145,15 @@ def cleanup_expired_sessions():
     if expired_sessions:
         print(f"Cleaned up {len(expired_sessions)} expired vault sessions")
 
+def admin_required(f):
+    """Decorator to require admin authentication"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('admin_authenticated'):
+            return redirect(url_for('admin_login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 def log_security_event(event_type, vault_id, description, additional_data=None):
     """Log security events for monitoring"""
     log_entry = {
@@ -156,10 +174,30 @@ def log_security_event(event_type, vault_id, description, additional_data=None):
     
     print(f"SECURITY LOG: {json.dumps(log_entry, indent=2)}")
 
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    """Admin login page"""
+    if request.method == 'POST':
+        password = request.form.get('password', '')
+        if password == ADMIN_PASSWORD:
+            session['admin_authenticated'] = True
+            flash('Login successful!', 'success')
+            return redirect(url_for('admin_dashboard'))
+        else:
+            flash('Invalid password!', 'error')
+    return render_template('admin_login.html')
+
+@app.route('/admin/logout')
+def admin_logout():
+    """Admin logout"""
+    session.pop('admin_authenticated', None)
+    flash('Logged out successfully', 'success')
+    return redirect(url_for('admin_login'))
+
 @app.route('/admin/vault-sessions')
+@admin_required
 def admin_vault_sessions():
     """Admin endpoint to view vault sessions (for monitoring)"""
-    # In production, add proper authentication
     cleanup_expired_sessions()
     
     active_sessions = []
@@ -181,18 +219,18 @@ def admin_vault_sessions():
     }
 
 @app.route('/admin/security-logs')
+@admin_required
 def admin_security_logs():
     """Admin endpoint to view security logs"""
-    # In production, add proper authentication
     return {
         'logs': SECURITY_LOGS[-50:],  # Last 50 logs
         'total_logs': len(SECURITY_LOGS)
     }
 
 @app.route('/admin/dashboard')
+@admin_required
 def admin_dashboard():
     """Admin dashboard page"""
-    # In production, add proper authentication
     return render_template('admin_dashboard.html')
 
 @app.route('/')
@@ -595,6 +633,8 @@ def advanced_vault_proxy(vault_id):
         return f"<div style='padding:2em;text-align:center;color:#c00;'>Failed to load or sanitize URL: {e}</div>", 502
 
 def check_url_safety(url):
+    if not SAFE_BROWSING_API_URL or not SAFE_BROWSING_API_KEY:
+        return None  # API key not configured
     data = {
         "client": {
             "clientId": "quishshield-demo",
@@ -609,34 +649,44 @@ def check_url_safety(url):
             ]
         }
     }
-    response = requests.post(SAFE_BROWSING_API_URL, json=data)
-    if response.status_code == 200:
-        result = response.json()
-        if 'matches' in result:
-            return False  # Dangerous
+    try:
+        response = requests.post(SAFE_BROWSING_API_URL, json=data, timeout=5)
+        if response.status_code == 200:
+            result = response.json()
+            if 'matches' in result:
+                return False  # Dangerous
+            else:
+                return True   # Safe
         else:
-            return True   # Safe
-    else:
+            return None  # Could not check
+    except Exception as e:
+        print(f"Error checking URL safety: {e}")
         return None  # Could not check
 
 def scan_with_urlscan(url):
-    headers = {'API-Key': URLSCAN_API_KEY, 'Content-Type': 'application/json'}
-    data = {'url': url, 'public': 'off'}
-    response = requests.post(URLSCAN_API_URL, headers=headers, json=data)
-    if response.status_code == 200:
-        scan_id = response.json()['uuid']
-        # Wait for scan to complete (5 seconds)
-        time.sleep(5)
-        result = requests.get(f'{URLSCAN_RESULT_URL}{scan_id}/').json()
-        # Check for login forms or suspicious keywords
-        verdict = 'safe'
-        page_text = str(result).lower()
-        if 'login' in page_text or 'phish' in page_text or 'password' in page_text:
-            verdict = 'suspicious'
-        screenshot_url = result.get('screenshotURL')
-        report_url = f'https://urlscan.io/result/{scan_id}/'
-        return verdict, screenshot_url, report_url
-    else:
+    if not URLSCAN_API_KEY:
+        return 'unknown', None, None  # API key not configured
+    try:
+        headers = {'API-Key': URLSCAN_API_KEY, 'Content-Type': 'application/json'}
+        data = {'url': url, 'public': 'off'}
+        response = requests.post(URLSCAN_API_URL, headers=headers, json=data, timeout=10)
+        if response.status_code == 200:
+            scan_id = response.json()['uuid']
+            # Wait for scan to complete (5 seconds)
+            time.sleep(5)
+            result = requests.get(f'{URLSCAN_RESULT_URL}{scan_id}/', timeout=10).json()
+            # Check for login forms or suspicious keywords
+            verdict = 'safe'
+            page_text = str(result).lower()
+            if 'login' in page_text or 'phish' in page_text or 'password' in page_text:
+                verdict = 'suspicious'
+            screenshot_url = result.get('screenshotURL')
+            report_url = f'https://urlscan.io/result/{scan_id}/'
+            return verdict, screenshot_url, report_url
+        else:
+            return 'unknown', None, None
+    except Exception as e:
+        print(f"Error scanning with URLScan: {e}")
         return 'unknown', None, None
 
 def heuristic_url_check(url):
@@ -663,21 +713,65 @@ def heuristic_url_check(url):
         reasons.append('URL has a long or suspicious query string.')
     return reasons
 
+@app.route('/admin/live_camera_feed')
+@admin_required
+def admin_live_camera_feed():
+    # Simple page to view the live feed
+    return '''
+    <html>
+    <body>
+        <h2>Live Camera Feed</h2>
+        <img id="liveFeed" style="max-width:100%">
+        <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"></script>
+        <script>
+            var socket = io();
+            function updateFrame() {
+                socket.emit('get_latest_frame');
+            }
+            socket.on('latest_frame', function(data) {
+                if (data) {
+                    document.getElementById('liveFeed').src = data;
+                }
+                setTimeout(updateFrame, 100);
+            });
+            updateFrame();
+        </script>
+    </body>
+    </html>
+    '''
+
+@socketio.on('camera_frame')
+def handle_camera_frame(data):
+    global latest_frame
+    latest_frame = data  # data is a base64-encoded image string
+
+@socketio.on('get_latest_frame')
+def send_latest_frame():
+    global latest_frame
+    if latest_frame:
+        emit('latest_frame', latest_frame)
+    else:
+        emit('latest_frame', None)
+
+# Initialize directories
+if not os.path.exists('static/qrs'):
+    os.makedirs('static/qrs')
+if not os.path.exists(SCREENSHOT_DIR):
+    os.makedirs(SCREENSHOT_DIR)
+
+# Start background cleanup task
+def background_cleanup():
+    while True:
+        try:
+            cleanup_expired_sessions()
+            time.sleep(300)  # Run every 5 minutes
+        except Exception as e:
+            print(f"Background cleanup error: {e}")
+            time.sleep(60)  # Wait 1 minute on error
+
+cleanup_thread = threading.Thread(target=background_cleanup, daemon=True)
+cleanup_thread.start()
+
 if __name__ == '__main__':
-    if not os.path.exists('static/qrs'):
-        os.makedirs('static/qrs')
-    
-    # Start background cleanup task
-    def background_cleanup():
-        while True:
-            try:
-                cleanup_expired_sessions()
-                time.sleep(300)  # Run every 5 minutes
-            except Exception as e:
-                print(f"Background cleanup error: {e}")
-                time.sleep(60)  # Wait 1 minute on error
-    
-    cleanup_thread = threading.Thread(target=background_cleanup, daemon=True)
-    cleanup_thread.start()
-    
-    app.run(host='0.0.0.0', port=5000)
+    # For local development
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
