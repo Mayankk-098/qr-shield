@@ -11,12 +11,18 @@ try:
     
     # Initialize Supabase client only if credentials are provided
     if SUPABASE_URL and SUPABASE_ANON_KEY:
-        supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
-        SUPABASE_ENABLED = True
+        try:
+            supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+            SUPABASE_ENABLED = True
+        except Exception as e:
+            print(f"Supabase initialization error: {str(e)}")
+            supabase = None
+            SUPABASE_ENABLED = False
     else:
         supabase = None
         SUPABASE_ENABLED = False
-except ImportError:
+except ImportError as e:
+    print(f"Supabase import error: {str(e)}")
     supabase = None
     SUPABASE_ENABLED = False
 
