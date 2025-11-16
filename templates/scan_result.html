@@ -89,7 +89,7 @@
         <div class="main-card w-100" style="max-width: 520px;">
             <h1 class="mb-3 fw-bold" style="color: #2d3748; letter-spacing: 1px;">QR Code Security Scanner <span style="font-size:1.5rem;">🛡️</span></h1>
             <div class="d-flex justify-content-end align-items-center mb-2">
-                <label class="form-check-label me-2" for="darkModeSwitch">�� Dark Mode</label>
+                <label class="form-check-label me-2" for="darkModeSwitch">Dark Mode</label>
                 <input class="form-check-input" type="checkbox" id="darkModeSwitch" onclick="setDarkMode(this.checked)">
             </div>
             {% if url %}
@@ -112,10 +112,8 @@
                     </div>
                     <div class="mb-2">
                         <a href="{{ url_for('vault_preview', vault_id=vault_id) }}" class="btn btn-primary w-100 mb-2" style="font-size:1.1em;">🖼️ Safest: Screenshot Preview (No Risk)</a>
-                        <small class="text-muted d-block mb-2">View a real screenshot of the page, rendered in a secure browser. No scripts or code will run.</small>
                         <a href="{{ url_for('advanced_vault_proxy', vault_id=vault_id) }}" class="btn btn-success w-100 mb-2" style="font-size:1.1em;">🛡️ Safe: Secure Proxy Vault</a>
-                        <small class="text-muted d-block mb-2">View a static, sanitized version of the page. No scripts or forms will run.</small>
-                        <a href="{{ url }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-danger w-100 mb-2" style="font-size:0.9em;">Open Directly (Not Recommended)</a>
+                        <a href="{{ url }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-danger w-100 mb-2" style="font-size:0.9em;">Open Directly</a>
                         <div class="text-break text-center mb-2" style="font-size:0.98em; color:#444; word-break:break-all;">
                             <strong>Decoded URL:</strong><br>
                             <span style="font-family:monospace;">{{ url }}</span>
@@ -175,30 +173,130 @@
     </script>
     <style>
     .dark-mode {
-        background: #181a1b !important;
-        color: #e0e0e0 !important;
+        background: #1a1d20 !important;
+        color: #e8e8e8 !important;
     }
     .dark-mode .main-card {
-        background: #23272b !important;
-        color: #e0e0e0 !important;
-        box-shadow: 0 4px 32px rgba(0,0,0,0.4);
+        background: #2d3135 !important;
+        color: #e8e8e8 !important;
+        box-shadow: 0 4px 32px rgba(0,0,0,0.6);
     }
-    .dark-mode .btn, .dark-mode .form-control {
-        background: #23272b !important;
-        color: #e0e0e0 !important;
-        border-color: #444 !important;
+    .dark-mode h1 {
+        color: #ffffff !important;
+    }
+    .dark-mode .form-check-label {
+        color: #e8e8e8 !important;
+    }
+    .dark-mode div[style*="color:#666"] {
+        color: #b0b0b0 !important;
+    }
+    .dark-mode div[style*="color:#444"] {
+        color: #d0d0d0 !important;
+    }
+    .dark-mode .badge {
+        color: #ffffff !important;
+    }
+    .dark-mode .badge.bg-danger {
+        background-color: #dc3545 !important;
+    }
+    .dark-mode .badge.bg-success {
+        background-color: #198754 !important;
+    }
+    .dark-mode .badge.bg-warning {
+        background-color: #ffc107 !important;
+        color: #000000 !important;
+    }
+    .dark-mode .btn {
+        border-color: #555 !important;
     }
     .dark-mode .btn-primary {
-        background: #3a3f44 !important;
-        border-color: #444 !important;
+        background: #0d6efd !important;
+        border-color: #0d6efd !important;
+        color: #ffffff !important;
+    }
+    .dark-mode .btn-primary:hover {
+        background: #0b5ed7 !important;
+        border-color: #0a58ca !important;
+    }
+    .dark-mode .btn-success {
+        background: #198754 !important;
+        border-color: #198754 !important;
+        color: #ffffff !important;
+    }
+    .dark-mode .btn-success:hover {
+        background: #157347 !important;
+        border-color: #146c43 !important;
+    }
+    .dark-mode .btn-outline-danger {
+        background: transparent !important;
+        border-color: #dc3545 !important;
+        color: #dc3545 !important;
+    }
+    .dark-mode .btn-outline-danger:hover {
+        background: #dc3545 !important;
+        color: #ffffff !important;
     }
     .dark-mode .btn-secondary {
-        background: #444 !important;
-        border-color: #666 !important;
+        background: #6c757d !important;
+        border-color: #6c757d !important;
+        color: #ffffff !important;
+    }
+    .dark-mode .btn-secondary:hover {
+        background: #5c636a !important;
+        border-color: #565e64 !important;
+    }
+    .dark-mode .btn-link {
+        color: #5dade2 !important;
+    }
+    .dark-mode .btn-link:hover {
+        color: #85c1e9 !important;
+    }
+    .dark-mode small.text-danger {
+        color: #ff6b6b !important;
+    }
+    .dark-mode small.text-muted {
+        color: #a0a0a0 !important;
+    }
+    .dark-mode .card {
+        background: #353a3f !important;
+        border-color: #444 !important;
+        color: #e8e8e8 !important;
+    }
+    .dark-mode .card-body {
+        background: #353a3f !important;
+        color: #e8e8e8 !important;
+    }
+    .dark-mode .alert-danger {
+        background: #58151c !important;
+        border-color: #842029 !important;
+        color: #f5c2c7 !important;
     }
     .dark-mode .footer {
-        color: #aaa !important;
+        color: #b0b0b0 !important;
+    }
+    .dark-mode strong {
+        color: #ffffff !important;
+    }
+    .dark-mode ul {
+        color: #e8e8e8 !important;
+    }
+    .dark-mode a {
+        color: #5dade2 !important;
+    }
+    .dark-mode a:hover {
+        color: #85c1e9 !important;
+    }
+    .dark-mode span[style*="font-family:monospace"] {
+        color: #d0d0d0 !important;
+    }
+    .dark-mode .form-check-input {
+        background-color: #353a3f !important;
+        border-color: #555 !important;
+    }
+    .dark-mode .form-check-input:checked {
+        background-color: #0d6efd !important;
+        border-color: #0d6efd !important;
     }
     </style>
 </body>
-</html> 
+</html>
