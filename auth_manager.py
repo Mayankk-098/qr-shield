@@ -1,30 +1,15 @@
 import os
+from supabase import create_client, Client
 from functools import wraps
 from flask import session, redirect, url_for, request, jsonify
 
 # Supabase configuration
-try:
-    from supabase import create_client, Client
-    SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
-    SUPABASE_ANON_KEY = os.environ.get('SUPABASE_ANON_KEY', '')
-    SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_KEY', '')
-    
-    # Initialize Supabase client only if credentials are provided
-    if SUPABASE_URL and SUPABASE_ANON_KEY:
-        try:
-            supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
-            SUPABASE_ENABLED = True
-        except Exception as e:
-            print(f"Supabase initialization error: {str(e)}")
-            supabase = None
-            SUPABASE_ENABLED = False
-    else:
-        supabase = None
-        SUPABASE_ENABLED = False
-except ImportError as e:
-    print(f"Supabase import error: {str(e)}")
-    supabase = None
-    SUPABASE_ENABLED = False
+SUPABASE_URL = os.environ.get('SUPABASE_URL', 'your_supabase_url')
+SUPABASE_ANON_KEY = os.environ.get('SUPABASE_ANON_KEY', 'your_supabase_anon_key')
+SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_KEY', 'your_supabase_service_key')
+
+# Initialize Supabase client
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 # Authentication decorator
 def login_required(f):
@@ -43,9 +28,6 @@ def get_current_user():
 
 # Login user
 def login_user(email, password):
-    if not SUPABASE_ENABLED:
-        return False, "Authentication system not configured. Please set up Supabase credentials."
-    
     try:
         response = supabase.auth.sign_in_with_password({
             "email": email,
@@ -65,9 +47,6 @@ def login_user(email, password):
 
 # Register user
 def register_user(email, password, full_name):
-    if not SUPABASE_ENABLED:
-        return False, "Authentication system not configured. Please set up Supabase credentials."
-    
     try:
         response = supabase.auth.sign_up({
             "email": email,
@@ -86,19 +65,15 @@ def register_user(email, password, full_name):
 
 # Logout user
 def logout_user():
-    if SUPABASE_ENABLED:
-        try:
-            supabase.auth.sign_out()
-        except Exception as e:
-            pass  # Ignore logout errors
-    session.pop('user', None)
-    return True, "Logout successful"
+    try:
+        supabase.auth.sign_out()
+        session.pop('user', None)
+        return True, "Logout successful"
+    except Exception as e:
+        return False, str(e)
 
 # Google OAuth login
 def google_login():
-    if not SUPABASE_ENABLED:
-        return None, "Authentication system not configured. Please set up Supabase credentials."
-    
     try:
         response = supabase.auth.sign_in_with_oauth({
             "provider": "google",
@@ -112,9 +87,6 @@ def google_login():
 
 # Get user scan history
 def get_user_scan_history(user_id, limit=50):
-    if not SUPABASE_ENABLED:
-        return []  # Return empty list if Supabase is not configured
-    
     try:
         response = supabase.table('scan_history').select('*').eq('user_id', user_id).order('created_at', desc=True).limit(limit).execute()
         return response.data
@@ -123,9 +95,6 @@ def get_user_scan_history(user_id, limit=50):
 
 # Add scan to history
 def add_scan_to_history(user_id, url, safety_score, safety_label, safe_browsing_verdict, urlscan_verdict, heuristic_reasons, vault_id):
-    if not SUPABASE_ENABLED:
-        return False  # Silently fail if Supabase is not configured
-    
     try:
         response = supabase.table('scan_history').insert({
             'user_id': user_id,
@@ -143,17 +112,6 @@ def add_scan_to_history(user_id, url, safety_score, safety_label, safe_browsing_
 
 # Update user profile
 def update_user_profile(user_id, full_name=None, avatar_url=None):
-    if not SUPABASE_ENABLED:
-        # Fallback: Update session data only
-        if 'user' in session:
-            if full_name:
-                session['user']['full_name'] = full_name
-            if avatar_url:
-                session['user']['avatar_url'] = avatar_url
-            session.modified = True
-            return True, "Profile updated successfully (demo mode)"
-        return False, "No user session found"
-    
     try:
         data = {}
         if full_name:

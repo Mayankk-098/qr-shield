@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, flash, session, url_for, Response, send_file, jsonify
+from flask import Flask, render_template, request, redirect, flash, session, url_for, Response, send_file
 from werkzeug.utils import secure_filename
 from functools import wraps
 import os
@@ -18,19 +18,7 @@ from bs4 import BeautifulSoup
 import bleach
 from playwright.sync_api import sync_playwright
 from flask_socketio import SocketIO, emit
-import eventlet
-import logging
-
-# Configure logging for production
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# Import authentication modules
-from auth_manager import (
-    supabase, login_required, get_current_user, login_user, 
-    register_user, logout_user, google_login, get_user_scan_history,
-    add_scan_to_history, update_user_profile
-)
+import base64
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'dev-secret-key')
@@ -249,210 +237,64 @@ def admin_dashboard():
 def index():
     return redirect('/scan')
 
-# Health check route for Render
-@app.route('/health')
-def health_check():
-    """Health check endpoint for Render"""
-    return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()}), 200
-
-# Authentication routes
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    try:
-        if request.method == 'POST':
-            email = request.form.get('email')
-            password = request.form.get('password')
-            success, message = login_user(email, password)
-            if success:
-                flash('Login successful!', 'success')
-                return redirect(request.args.get('next') or url_for('scan_qr'))
-            else:
-                flash(message, 'error')
-        return render_template('login.html')
-    except Exception as e:
-        logger.error(f"Login route error: {str(e)}")
-        flash('An error occurred. Please try again.', 'error')
-        return render_template('login.html'), 500
-
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    try:
-        if request.method == 'POST':
-            email = request.form.get('email')
-            password = request.form.get('password')
-            full_name = request.form.get('full_name')
-            success, message = register_user(email, password, full_name)
-            if success:
-                flash('Registration successful! Please login.', 'success')
-                return redirect(url_for('login'))
-            else:
-                flash(message, 'error')
-        return render_template('register.html')
-    except Exception as e:
-        logger.error(f"Register route error: {str(e)}")
-        flash('An error occurred. Please try again.', 'error')
-        return render_template('register.html'), 500
-
-@app.route('/logout')
-def logout():
-    success, message = logout_user()
-    flash(message, 'success')
-    return redirect(url_for('login'))
-
-@app.route('/auth/google')
-def google_auth():
-    auth_url = google_login()
-    if auth_url:
-        return redirect(auth_url)
-    flash('Google authentication failed', 'error')
-    return redirect(url_for('login'))
-
-@app.route('/auth/callback')
-def auth_callback():
-    # Handle OAuth callback
-    code = request.args.get('code')
-    if code:
-        try:
-            # Exchange code for session
-            response = supabase.auth.exchange_code_for_session(code)
-            if response.user:
-                session['user'] = {
-                    'id': response.user.id,
-                    'email': response.user.email,
-                    'full_name': response.user.user_metadata.get('full_name', ''),
-                    'avatar_url': response.user.user_metadata.get('avatar_url', '')
-                }
-                flash('Google login successful!', 'success')
-                return redirect(url_for('scan_qr'))
-        except Exception as e:
-            flash(f'Google authentication failed: {str(e)}', 'error')
-    return redirect(url_for('login'))
-
-@app.route('/profile')
-@login_required
-def profile():
-    user = get_current_user()
-    return render_template('profile.html', user=user)
-
-@app.route('/profile/update', methods=['POST'])
-@login_required
-def update_profile():
-    user = get_current_user()
-    full_name = request.form.get('full_name')
-    avatar_url = request.form.get('avatar_url')
-    
-    success, message = update_user_profile(user['id'], full_name, avatar_url)
-    if success:
-        # Update session data
-        user['full_name'] = full_name or user['full_name']
-        user['avatar_url'] = avatar_url or user['avatar_url']
-        session['user'] = user
-        flash(message, 'success')
-    else:
-        flash(message, 'error')
-    return redirect(url_for('profile'))
-
-@app.route('/api/scan-history')
-@login_required
-def api_scan_history():
-    user = get_current_user()
-    scans = get_user_scan_history(user['id'])
-    return jsonify(scans)
-
 @app.route('/scan', methods=['GET', 'POST'])
 def scan_qr():
-    try:
-        if request.method == 'POST':
-            file = request.files.get('qr_image')
-            qr_text = request.form.get('qr_image')
-            url = None
+    if request.method == 'POST':
+        file = request.files.get('qr_image')
+        qr_text = request.form.get('qr_image')
+        if file and file.filename != '':
+            filename = secure_filename(file.filename)
+            filepath = os.path.join('static', 'qrs', filename)
+            file.save(filepath)
+            # Decode QR code using OpenCV
+            img = cv2.imread(filepath)
+            print("Image loaded:", img is not None)
+            detector = cv2.QRCodeDetector()
+            data, bbox, _ = detector.detectAndDecode(img)
+            print("QR data:", data)
+            url = data if data else None
+        elif qr_text:
+            url = qr_text
+        else:
+            flash('No file or QR code provided')
+            return redirect(request.url)
+        if url:
+            verdict = check_url_safety(url)
+            urlscan_verdict, screenshot_url, report_url = scan_with_urlscan(url)
+            heuristic_reasons = heuristic_url_check(url)
+            # --- Safety Score Calculation ---
+            score = 10
+            if verdict == False:
+                score -= 6
+            if urlscan_verdict == 'suspicious':
+                score -= 3
+            if heuristic_reasons:
+                score -= min(len(heuristic_reasons), 3)  # up to -3 for heuristics
+            score = max(0, min(10, score))
+            if score >= 8:
+                safety_label = 'Safe'
+            elif score >= 5:
+                safety_label = 'Suspicious'
+            else:
+                safety_label = 'Dangerous'
             
-            if file and file.filename != '':
-                try:
-                    filename = secure_filename(file.filename)
-                    filepath = os.path.join('static', 'qrs', filename)
-                    file.save(filepath)
-                    # Decode QR code using OpenCV
-                    img = cv2.imread(filepath)
-                    print("Image loaded:", img is not None)
-                    detector = cv2.QRCodeDetector()
-                    data, bbox, _ = detector.detectAndDecode(img)
-                    print("QR data:", data)
-                    url = data if data else None
-                except Exception as e:
-                    logger.error(f"QR file processing error: {str(e)}")
-                    flash('Error processing QR code image', 'error')
-                    return redirect(request.url)
-            elif qr_text:
-                url = qr_text.strip()
-            else:
-                flash('No file or QR code provided', 'error')
-                return redirect(request.url)
-                
-            if url:
-                try:
-                    # Safety checks
-                    verdict = check_url_safety(url)
-                    urlscan_verdict, screenshot_url, report_url = scan_with_urlscan(url)
-                    heuristic_reasons = heuristic_url_check(url)
-                    
-                    # Safety Score Calculation
-                    score = 10
-                    if verdict == False:
-                        score -= 6
-                    if urlscan_verdict == 'suspicious':
-                        score -= 3
-                    if heuristic_reasons:
-                        score -= min(len(heuristic_reasons), 3)
-                    score = max(0, min(10, score))
-                    
-                    if score >= 8:
-                        safety_label = 'Safe'
-                    elif score >= 5:
-                        safety_label = 'Suspicious'
-                    else:
-                        safety_label = 'Dangerous'
-                    
-                    # Create vault session
-                    vault_id = create_vault_session(url, safety_label, score)
-                    
-                    # Track scan for logged-in user
-                    current_user = get_current_user()
-                    if current_user:
-                        add_scan_to_history(
-                            user_id=current_user['id'],
-                            url=url,
-                            safety_score=score,
-                            safety_label=safety_label,
-                            safe_browsing_verdict=verdict,
-                            urlscan_verdict=urlscan_verdict,
-                            heuristic_reasons=heuristic_reasons,
-                            vault_id=vault_id
-                        )
-                    
-                    return render_template('scan_result.html', 
-                                        url=url, 
-                                        verdict=verdict, 
-                                        urlscan_verdict=urlscan_verdict, 
-                                        screenshot_url=screenshot_url, 
-                                        report_url=report_url, 
-                                        heuristic_reasons=heuristic_reasons, 
-                                        safety_score=score, 
-                                        safety_label=safety_label,
-                                        vault_id=vault_id)
-                except Exception as e:
-                    logger.error(f"URL scanning error: {str(e)}")
-                    flash('Error scanning URL. Please try again.', 'error')
-                    return redirect(request.url)
-            else:
-                flash('No QR code detected or QR does not contain a URL.', 'error')
-                return redirect(request.url)
-                
-        return render_template('scan.html')
-    except Exception as e:
-        logger.error(f"Scan route error: {str(e)}")
-        flash('An error occurred. Please try again.', 'error')
-        return render_template('scan.html'), 500
+            # Create vault session for this URL
+            vault_id = create_vault_session(url, safety_label, score)
+            
+            return render_template('scan_result.html', 
+                                url=url, 
+                                verdict=verdict, 
+                                urlscan_verdict=urlscan_verdict, 
+                                screenshot_url=screenshot_url, 
+                                report_url=report_url, 
+                                heuristic_reasons=heuristic_reasons, 
+                                safety_score=score, 
+                                safety_label=safety_label,
+                                vault_id=vault_id)
+        else:
+            flash('No QR code detected or QR does not contain a URL.')
+            return redirect(request.url)
+    return render_template('scan.html')
 
 def create_vault_session(url, safety_label, score):
     """Create a secure vault session for the URL"""
@@ -932,5 +774,4 @@ cleanup_thread.start()
 
 if __name__ == '__main__':
     # For local development
-    port = int(os.environ.get('PORT', 5000))
-    socketio.run(app, host='0.0.0.0', port=port, debug=True)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
