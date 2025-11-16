@@ -20,6 +20,13 @@ from playwright.sync_api import sync_playwright
 from flask_socketio import SocketIO, emit
 import base64
 
+# Import authentication modules
+from auth_manager import (
+    supabase, login_required, get_current_user, login_user, 
+    register_user, logout_user, google_login, get_user_scan_history,
+    add_scan_to_history, update_user_profile
+)
+
 app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'dev-secret-key')
 
@@ -237,6 +244,100 @@ def admin_dashboard():
 def index():
     return redirect('/scan')
 
+# Authentication routes
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        success, message = login_user(email, password)
+        if success:
+            flash('Login successful!', 'success')
+            return redirect(request.args.get('next') or url_for('scan_qr'))
+        else:
+            flash(message, 'error')
+    return render_template('login.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        full_name = request.form.get('full_name')
+        success, message = register_user(email, password, full_name)
+        if success:
+            flash('Registration successful! Please login.', 'success')
+            return redirect(url_for('login'))
+        else:
+            flash(message, 'error')
+    return render_template('register.html')
+
+@app.route('/logout')
+def logout():
+    success, message = logout_user()
+    flash(message, 'success')
+    return redirect(url_for('login'))
+
+@app.route('/auth/google')
+def google_auth():
+    auth_url = google_login()
+    if auth_url:
+        return redirect(auth_url)
+    flash('Google authentication failed', 'error')
+    return redirect(url_for('login'))
+
+@app.route('/auth/callback')
+def auth_callback():
+    # Handle OAuth callback
+    code = request.args.get('code')
+    if code:
+        try:
+            # Exchange code for session
+            response = supabase.auth.exchange_code_for_session(code)
+            if response.user:
+                session['user'] = {
+                    'id': response.user.id,
+                    'email': response.user.email,
+                    'full_name': response.user.user_metadata.get('full_name', ''),
+                    'avatar_url': response.user.user_metadata.get('avatar_url', '')
+                }
+                flash('Google login successful!', 'success')
+                return redirect(url_for('scan_qr'))
+        except Exception as e:
+            flash(f'Google authentication failed: {str(e)}', 'error')
+    return redirect(url_for('login'))
+
+@app.route('/profile')
+@login_required
+def profile():
+    user = get_current_user()
+    return render_template('profile.html', user=user)
+
+@app.route('/profile/update', methods=['POST'])
+@login_required
+def update_profile():
+    user = get_current_user()
+    full_name = request.form.get('full_name')
+    avatar_url = request.form.get('avatar_url')
+    
+    success, message = update_user_profile(user['id'], full_name, avatar_url)
+    if success:
+        # Update session data
+        user['full_name'] = full_name or user['full_name']
+        user['avatar_url'] = avatar_url or user['avatar_url']
+        session['user'] = user
+        flash(message, 'success')
+    else:
+        flash(message, 'error')
+    return redirect(url_for('profile'))
+
+@app.route('/api/scan-history')
+@login_required
+def api_scan_history():
+    user = get_current_user()
+    scans = get_user_scan_history(user['id'])
+    return jsonify(scans)
+
 @app.route('/scan', methods=['GET', 'POST'])
 def scan_qr():
     if request.method == 'POST':
@@ -280,6 +381,20 @@ def scan_qr():
             
             # Create vault session for this URL
             vault_id = create_vault_session(url, safety_label, score)
+            
+            # Track scan for logged-in user
+            current_user = get_current_user()
+            if current_user:
+                add_scan_to_history(
+                    user_id=current_user['id'],
+                    url=url,
+                    safety_score=score,
+                    safety_label=safety_label,
+                    safe_browsing_verdict=verdict,
+                    urlscan_verdict=urlscan_verdict,
+                    heuristic_reasons=heuristic_reasons,
+                    vault_id=vault_id
+                )
             
             return render_template('scan_result.html', 
                                 url=url, 

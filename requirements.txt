@@ -10,3 +10,5 @@ gunicorn
 beautifulsoup4
 bleach
 playwright
+supabase
+python-dotenv

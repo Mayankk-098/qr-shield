@@ -119,6 +119,45 @@
     </style>
 </head>
 <body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="/">
+                <span class="text-primary">QR Shield</span> 🛡️
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    {% if session.user %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                                {% if session.user.avatar_url %}
+                                    <img src="{{ session.user.avatar_url }}" alt="Avatar" class="rounded-circle me-2" style="width: 24px; height: 24px;">
+                                {% endif %}
+                                {{ session.user.full_name or session.user.email }}
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{{ url_for('profile') }}">Profile</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('api_scan_history') }}">Scan History</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ url_for('logout') }}">Logout</a></li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('login') }}">Login</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link btn btn-primary text-white ms-2" href="{{ url_for('register') }}">Sign Up</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
     <div class="container d-flex justify-content-center align-items-center flex-column" style="min-height: 80vh;">
         <div class="main-card w-100" style="max-width: 420px;">
             <h1 class="mb-3 fw-bold" style="color: #2d3748; letter-spacing: 1px;">QR Shield <span style="font-size:1.5rem;">🛡️</span></h1>
@@ -338,6 +377,19 @@
               {% endif %}
             {% endwith %}
         </div>
+        
+        <!-- Recent Scan History for Logged-in Users -->
+        {% if session.user %}
+        <div class="main-card w-100 mt-4" style="max-width: 420px;">
+            <h5 class="mb-3">📊 Your Recent Scans</h5>
+            <div id="recentScans" class="scan-history" style="max-height: 200px; overflow-y: auto;">
+                <div class="text-center text-muted">Loading recent scans...</div>
+            </div>
+            <div class="mt-3 text-center">
+                <a href="{{ url_for('profile') }}" class="btn btn-outline-primary btn-sm">View All Scans</a>
+            </div>
+        </div>
+        {% endif %}
     </div>
     <div class="footer">
         &copy; {{ now().year if now else '2025' }} QR Shield &mdash; By Mayank 
@@ -354,6 +406,51 @@
             localStorage.setItem('darkMode', '0');
         }
     }
+    
+    // Load recent scans for logged-in users
+    {% if session.user %}
+    async function loadRecentScans() {
+        try {
+            const response = await fetch('{{ url_for("api_scan_history") }}');
+            const scans = await response.json();
+            
+            const recentScansContainer = document.getElementById('recentScans');
+            if (scans.length === 0) {
+                recentScansContainer.innerHTML = '<div class="text-center text-muted">No scans yet. Start scanning QR codes!</div>';
+                return;
+            }
+            
+            // Show only the 5 most recent scans
+            const recentScans = scans.slice(0, 5);
+            
+            recentScansContainer.innerHTML = recentScans.map(scan => `
+                <div class="scan-item ${scan.safety_label.toLowerCase()} mb-2 p-2 rounded">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <small><strong>${scan.url.substring(0, 40)}${scan.url.length > 40 ? '...' : ''}</strong></small>
+                            <br>
+                            <small class="text-muted">
+                                <span class="badge bg-${scan.safety_label === 'Safe' ? 'success' : scan.safety_label === 'Suspicious' ? 'warning' : 'danger'} small">
+                                    ${scan.safety_label}
+                                </span>
+                                ${scan.safety_score}/10
+                            </small>
+                        </div>
+                        <small class="text-muted">${new Date(scan.created_at).toLocaleDateString()}</small>
+                    </div>
+                </div>
+            `).join('');
+            
+        } catch (error) {
+            console.error('Error loading recent scans:', error);
+            document.getElementById('recentScans').innerHTML = '<div class="text-center text-danger">Error loading scans</div>';
+        }
+    }
+    
+    // Load recent scans on page load
+    loadRecentScans();
+    {% endif %}
+    
     window.onload = function() {
         const dark = localStorage.getItem('darkMode') === '1';
         setDarkMode(dark);
@@ -362,4 +459,4 @@
             darkModeSwitch.checked = dark;
         }
     };
-    </script> 
+    </script>
