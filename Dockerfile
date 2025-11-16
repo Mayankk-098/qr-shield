@@ -1,5 +1,5 @@
 
-FROM mcr.microsoft.com/playwright/python:v1.56.1-jammy
+FROM mcr.microsoft.com/playwright/python:v1.56.0-jammy
 
 WORKDIR /app
 
@@ -18,8 +18,8 @@ COPY . .
 # Make startup script executable
 RUN chmod +x start.sh
 
-# Install Playwright browsers
-RUN python -m playwright install
+# Install Playwright browsers and OS dependencies
+RUN python -m playwright install && playwright install-deps
 
 # Use Render's PORT environment variable
 ENV PORT=10000

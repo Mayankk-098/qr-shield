@@ -406,57 +406,8 @@
             localStorage.setItem('darkMode', '0');
         }
     }
-    
-    // Load recent scans for logged-in users
-    {% if session.user %}
-    async function loadRecentScans() {
-        try {
-            const response = await fetch('{{ url_for("api_scan_history") }}');
-            const scans = await response.json();
-            
-            const recentScansContainer = document.getElementById('recentScans');
-            if (scans.length === 0) {
-                recentScansContainer.innerHTML = '<div class="text-center text-muted">No scans yet. Start scanning QR codes!</div>';
-                return;
-            }
-            
-            // Show only the 5 most recent scans
-            const recentScans = scans.slice(0, 5);
-            
-            recentScansContainer.innerHTML = recentScans.map(scan => `
-                <div class="scan-item ${scan.safety_label.toLowerCase()} mb-2 p-2 rounded">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <small><strong>${scan.url.substring(0, 40)}${scan.url.length > 40 ? '...' : ''}</strong></small>
-                            <br>
-                            <small class="text-muted">
-                                <span class="badge bg-${scan.safety_label === 'Safe' ? 'success' : scan.safety_label === 'Suspicious' ? 'warning' : 'danger'} small">
-                                    ${scan.safety_label}
-                                </span>
-                                ${scan.safety_score}/10
-                            </small>
-                        </div>
-                        <small class="text-muted">${new Date(scan.created_at).toLocaleDateString()}</small>
-                    </div>
-                </div>
-            `).join('');
-            
-        } catch (error) {
-            console.error('Error loading recent scans:', error);
-            document.getElementById('recentScans').innerHTML = '<div class="text-center text-danger">Error loading scans</div>';
-        }
-    }
-    
-    // Load recent scans on page load
-    loadRecentScans();
-    {% endif %}
-    
-    window.onload = function() {
-        const dark = localStorage.getItem('darkMode') === '1';
-        setDarkMode(dark);
-        const darkModeSwitch = document.getElementById('darkModeSwitch');
-        if (darkModeSwitch) {
-            darkModeSwitch.checked = dark;
-        }
-    };
     </script>
+</body>
+</html>
+    
+    
