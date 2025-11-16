@@ -32,29 +32,89 @@
             font-size: 0.95rem;
         }
         .dark-mode {
-            background: #181a1b !important;
-            color: #e0e0e0 !important;
+            background: #1a1d20 !important;
+            color: #e8e8e8 !important;
         }
         .dark-mode .main-card {
-            background: #23272b !important;
-            color: #e0e0e0 !important;
-            box-shadow: 0 4px 32px rgba(0,0,0,0.4);
+            background: #2d3135 !important;
+            color: #e8e8e8 !important;
+            box-shadow: 0 4px 32px rgba(0,0,0,0.6);
         }
-        .dark-mode .btn, .dark-mode .form-control {
-            background: #23272b !important;
-            color: #e0e0e0 !important;
-            border-color: #444 !important;
+        .dark-mode h1 {
+            color: #ffffff !important;
+        }
+        .dark-mode .form-check-label {
+            color: #e8e8e8 !important;
+        }
+        .dark-mode .text-muted {
+            color: #b0b0b0 !important;
+        }
+        .dark-mode .btn {
+            border-color: #555 !important;
         }
         .dark-mode .btn-primary {
-            background: #3a3f44 !important;
-            border-color: #444 !important;
+            background: #0d6efd !important;
+            border-color: #0d6efd !important;
+            color: #ffffff !important;
         }
-        .dark-mode .btn-secondary {
-            background: #444 !important;
-            border-color: #666 !important;
+        .dark-mode .btn-primary:hover {
+            background: #0b5ed7 !important;
+            border-color: #0a58ca !important;
+        }
+        .dark-mode .btn-outline-success {
+            background: transparent !important;
+            border-color: #198754 !important;
+            color: #198754 !important;
+        }
+        .dark-mode .btn-outline-success:hover {
+            background: #198754 !important;
+            color: #ffffff !important;
+        }
+        .dark-mode .btn-outline-danger {
+            background: transparent !important;
+            border-color: #dc3545 !important;
+            color: #dc3545 !important;
+        }
+        .dark-mode .btn-outline-danger:hover {
+            background: #dc3545 !important;
+            color: #ffffff !important;
+        }
+        .dark-mode .form-control {
+            background: #353a3f !important;
+            color: #e8e8e8 !important;
+            border-color: #555 !important;
+        }
+        .dark-mode .form-control:focus {
+            background: #353a3f !important;
+            color: #e8e8e8 !important;
+            border-color: #0d6efd !important;
+        }
+        .dark-mode .alert-warning {
+            background: #664d03 !important;
+            border-color: #ffc107 !important;
+            color: #ffc107 !important;
+        }
+        .dark-mode .alert-danger {
+            background: #58151c !important;
+            border-color: #842029 !important;
+            color: #f5c2c7 !important;
         }
         .dark-mode .footer {
-            color: #aaa !important;
+            color: #b0b0b0 !important;
+        }
+        .dark-mode .form-check-input {
+            background-color: #353a3f !important;
+            border-color: #555 !important;
+        }
+        .dark-mode .form-check-input:checked {
+            background-color: #0d6efd !important;
+            border-color: #0d6efd !important;
+        }
+        .dark-mode #qr-video-region {
+            background: #1a1d20 !important;
+        }
+        .dark-mode #qr-video-region video {
+            background: #000 !important;
         }
     </style>
 </head>
@@ -64,7 +124,7 @@
             <h1 class="mb-3 fw-bold" style="color: #2d3748; letter-spacing: 1px;">QR Code Security Scanner <span style="font-size:1.5rem;">🛡️</span></h1>
             <p class="mb-4 text-muted">Upload a QR code image to check if the embedded link is safe or suspicious using multiple security checks.</p>
             <div class="d-flex justify-content-end align-items-center mb-2">
-                <label class="form-check-label me-2" for="darkModeSwitch">🌙 Dark Mode</label>
+                <label class="form-check-label me-2" for="darkModeSwitch">Dark Mode</label>
                 <input class="form-check-input" type="checkbox" id="darkModeSwitch" onclick="setDarkMode(this.checked)">
             </div>
             <form method="POST" enctype="multipart/form-data" class="mb-4">
@@ -78,7 +138,6 @@
             </div>
             <div class="d-grid gap-2 mb-3">
                 <button id="camera-scan-btn" class="btn btn-outline-success btn-lg" type="button">Scan with Camera</button>
-                <button id="open-camera-feed-btn" class="btn btn-outline-primary btn-lg" type="button" style="display:none;">View Camera Feed in New Window</button>
             </div>
             <div id="camera-scanner" style="display:none; margin-bottom:1.5rem;">
                 <div class="text-center mb-2">
@@ -110,7 +169,6 @@
                 const captureBtn = document.getElementById('capture-scan-btn');
                 const loadingSpinner = document.getElementById('camera-loading');
                 const errorDiv = document.getElementById('camera-error');
-                const openFeedBtn = document.getElementById('open-camera-feed-btn');
                 let html5Qr;
                 let isCameraRunning = false;
                 let cameraStream = null;
@@ -170,16 +228,6 @@
                         ).then(() => {
                             loadingSpinner.style.display = 'none';
                             isCameraRunning = true;
-                            // Request camera stream for separate window
-                            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-                                .then(stream => {
-                                    cameraStream = stream;
-                                    openFeedBtn.style.display = 'block';
-                                })
-                                .catch(() => {
-                                    cameraStream = null;
-                                    openFeedBtn.style.display = 'none';
-                                });
                             // Start live stream - wait for video element to be available
                             setTimeout(() => {
                                 const video = getVideoElement();
@@ -205,23 +253,6 @@
                             loadingSpinner.style.display = 'none';
                         });
                     }, 300);
-                });
-
-                openFeedBtn.addEventListener('click', function() {
-                    if (!cameraStream) return;
-                    const win = window.open('', '_blank', 'width=480,height=400');
-                    if (!win) return;
-                    win.document.write('<html><head><title>Camera Feed</title></head><body style="margin:0;background:#111;color:#fff;"><video id="camvid" autoplay playsinline style="width:100%;height:auto;max-height:100vh;background:#000;"></video></body></html>');
-                    win.document.close();
-                    const video = win.document.getElementById('camvid');
-                    if (video) {
-                        video.srcObject = cameraStream;
-                    }
-                    win.onbeforeunload = function() {
-                        if (video && video.srcObject) {
-                            video.srcObject.getTracks().forEach(track => track.stop());
-                        }
-                    };
                 });
 
                 captureBtn.addEventListener('click', function() {
@@ -266,7 +297,6 @@
                             loadingSpinner.style.display = 'none';
                             errorDiv.style.display = 'none';
                             isCameraRunning = false;
-                            openFeedBtn.style.display = 'none';
                             if (cameraStream) {
                                 cameraStream.getTracks().forEach(track => track.stop());
                                 cameraStream = null;
@@ -278,7 +308,6 @@
                             loadingSpinner.style.display = 'none';
                             errorDiv.style.display = 'none';
                             isCameraRunning = false;
-                            openFeedBtn.style.display = 'none';
                             if (cameraStream) {
                                 cameraStream.getTracks().forEach(track => track.stop());
                                 cameraStream = null;
@@ -291,7 +320,6 @@
                         loadingSpinner.style.display = 'none';
                         errorDiv.style.display = 'none';
                         isCameraRunning = false;
-                        openFeedBtn.style.display = 'none';
                         if (cameraStream) {
                             cameraStream.getTracks().forEach(track => track.stop());
                             cameraStream = null;
@@ -312,7 +340,26 @@
         </div>
     </div>
     <div class="footer">
-        &copy; {{ now().year if now else '2024' }} QR Security Scanner &mdash; Powered by Flask, Google Safe Browsing, URLScan.io
+        &copy; {{ now().year if now else '2025' }} QR Shield &mdash; By Mayank 
     </div>
-</body>
-</html> 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    // Dark mode toggle logic
+    function setDarkMode(enabled) {
+        if (enabled) {
+            document.body.classList.add('dark-mode');
+            localStorage.setItem('darkMode', '1');
+        } else {
+            document.body.classList.remove('dark-mode');
+            localStorage.setItem('darkMode', '0');
+        }
+    }
+    window.onload = function() {
+        const dark = localStorage.getItem('darkMode') === '1';
+        setDarkMode(dark);
+        const darkModeSwitch = document.getElementById('darkModeSwitch');
+        if (darkModeSwitch) {
+            darkModeSwitch.checked = dark;
+        }
+    };
+    </script> 
